@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DISCOVERY · Rovers et explorateurs de surface</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<style>
+:root {
+  --bg: #0C0D10; --surface: #14161A; --surface-2: #1C1F25;
+  --line: #262932; --line-strong: #3A3E48;
+  --text: #EAE5DC; --text-soft: #B5B0A5; --text-mute: #8E8A80;
+  --accent: #D4A24C; --accent-soft: rgba(212,162,76,0.12);
+  --cyan: #6BB5C9; --ok: #6BA86A; --ko: #B85A4A; --steel: #7A9AB8;
+  --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'Courier New', Courier, monospace;
+  --radius: 4px; --radius-lg: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.55; font-size: 17px; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body.reading-mode .site-header, body.reading-mode .site-footer { display: none; }
+img, svg { display: block; max-width: 100%; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.hidden { display: none !important; }
+.skip { position: absolute; left: -9999px; top: 0; background: var(--accent); color: var(--bg); padding: 0.5rem 1rem; font-weight: 600; z-index: 10000; }
+.skip:focus { left: 0.5rem; top: 0.5rem; }
+.wrap { width: min(1200px, calc(100% - 2.5rem)); margin-inline: auto; }
+
+/* HEADER */
+.site-header { border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 100; background: rgba(12,13,16,0.96); backdrop-filter: blur(8px); }
+.header-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.75rem; }
+.brand { display: flex; align-items: center; gap: 0.75rem; }
+.brand-logo { width: 48px; height: 48px; flex-shrink: 0; }
+.main-nav { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
+.nav-link { font-size: 0.85rem; color: var(--text-soft); padding: 0.25rem 0; border-bottom: 1px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.nav-link:hover { color: var(--text); border-bottom-color: var(--accent); text-decoration: none; }
+.header-tools { display: flex; align-items: center; gap: 0.5rem; }
+.icon-btn { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-soft); transition: background 0.15s, color 0.15s; position: relative; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn .badge-count { position: absolute; top: 2px; right: 2px; font-size: 0.6rem; background: var(--accent); color: var(--bg); border-radius: 8px; padding: 1px 4px; font-weight: bold; min-width: 14px; text-align: center; }
+@media (max-width: 960px) {
+  .header-row { flex-wrap: wrap; }
+  .main-nav { order: 3; width: 100%; justify-content: flex-start; gap: 0.9rem; padding-top: 0.5rem; }
+  .brand-logo { width: 40px; height: 40px; }
+}
+
+/* SEARCH */
+.search-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 300; background: rgba(12,13,16,0.98); backdrop-filter: blur(12px); padding: 1rem; transform: translateY(-110%); transition: transform 0.3s; border-bottom: 1px solid var(--line); }
+.search-bar.open { transform: translateY(0); }
+.search-inner { width: min(760px, 100%); margin-inline: auto; display: flex; gap: 0.5rem; align-items: center; }
+.search-inner input { flex: 1; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 0.75rem 1rem; color: var(--text); font-size: 1rem; font-family: var(--sans); }
+.search-inner input:focus { outline: none; border-color: var(--accent); }
+.search-results { width: min(760px, 100%); margin: 0.5rem auto 0; max-height: 50vh; overflow-y: auto; }
+.search-result { padding: 0.6rem 0.9rem; border-radius: var(--radius); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.search-result:hover { background: var(--surface-2); }
+.search-result strong { color: var(--text); font-size: 0.92rem; }
+.search-result small { color: var(--text-mute); font-size: 0.78rem; }
+.search-empty { text-align: center; padding: 1rem; color: var(--text-mute); font-size: 0.85rem; }
+
+/* HERO */
+.hero { padding-block: 5rem 6rem; border-bottom: 1px solid var(--line); background: radial-gradient(ellipse at 70% 20%, rgba(212,162,76,0.07) 0%, transparent 60%); }
+.hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; align-items: center; }
+.hero-kicker { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent); font-weight: 600; margin-bottom: 1.25rem; font-family: var(--mono); }
+.hero h1 { font-family: var(--serif); font-weight: normal; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -0.01em; }
+.hero h1 em { font-style: italic; color: var(--accent); }
+.hero-sub { color: var(--text-soft); font-size: 1.08rem; max-width: 52ch; margin-bottom: 2rem; }
+.hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.hero-art img { width: 100%; max-width: 520px; border-radius: var(--radius-lg); border: 1px solid var(--line); box-shadow: 0 20px 40px rgba(0,0,0,0.45); margin-inline: auto; aspect-ratio: 4/3; object-fit: cover; }
+@media (max-width: 860px) { .hero { padding-block: 3rem 4rem; } .hero-grid { grid-template-columns: 1fr; gap: 2rem; } .hero-art { order: -1; max-width: 400px; } }
+
+/* SECTIONS */
+.section { padding-block: 5rem; }
+.section + .section { border-top: 1px solid var(--line); }
+.section-head { margin-bottom: 2.5rem; max-width: 60ch; }
+.section-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--accent); font-weight: 600; margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.75rem; font-family: var(--mono); }
+.section-kicker::after { content: ''; flex: 0 0 2rem; height: 1px; background: var(--line-strong); }
+.section-title { font-family: var(--serif); font-weight: normal; font-size: clamp(1.6rem, 3.5vw, 2.2rem); line-height: 1.2; margin-bottom: 0.9rem; }
+.section-sub { color: var(--text-soft); font-size: 1rem; max-width: 58ch; }
+
+/* BTN */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 44px; padding: 0.7rem 1.4rem; border-radius: var(--radius); font-size: 0.9rem; font-weight: 500; transition: all 0.15s; text-decoration: none; }
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-primary:hover { background: #E0B45E; text-decoration: none; }
+.btn-ghost { border: 1px solid var(--line-strong); color: var(--text); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.btn-sm { min-height: 36px; padding: 0.4rem 0.9rem; font-size: 0.82rem; }
+
+/* INTRO */
+.intro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+@media (max-width: 860px) { .intro-grid { grid-template-columns: 1fr; gap: 2rem; } }
+.intro-visual { aspect-ratio: 4/3; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.intro-visual img { width: 100%; height: 100%; object-fit: cover; }
+.intro-body h2 { font-family: var(--serif); font-weight: normal; font-size: clamp(1.6rem, 3.5vw, 2.1rem); line-height: 1.25; margin-bottom: 1rem; }
+.intro-body p { color: var(--text-soft); margin-bottom: 1rem; font-size: 1rem; line-height: 1.7; }
+.intro-body p strong { color: var(--text); font-weight: 600; }
+.intro-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1.5rem; }
+.intro-fact { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem; }
+.intro-fact .num { font-family: var(--serif); font-size: 1.6rem; color: var(--accent); line-height: 1; margin-bottom: 0.3rem; }
+.intro-fact .label { font-size: 0.72rem; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono); }
+
+/* THREAD */
+.thread-section { padding-block: 4rem; background: linear-gradient(180deg, transparent 0%, rgba(212,162,76,0.03) 100%); border-bottom: 1px solid var(--line); }
+.thread-quote { font-family: var(--serif); font-size: clamp(1.1rem, 2.2vw, 1.5rem); line-height: 1.5; font-style: italic; max-width: 62ch; margin: 0 auto; text-align: center; color: var(--text); position: relative; padding: 2rem 3rem; }
+.thread-quote::before, .thread-quote::after { font-family: var(--serif); font-size: 4rem; color: var(--accent); line-height: 1; opacity: 0.6; position: absolute; }
+.thread-quote::before { content: '"'; top: -0.5rem; left: 0; }
+.thread-quote::after { content: '"'; bottom: -2rem; right: 0; }
+
+/* CONCEPT */
+.concept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+.concept-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; transition: border-color 0.15s, transform 0.2s; }
+.concept-card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.concept-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-bottom: 1rem; }
+.concept-card h3 { font-family: var(--serif); font-weight: normal; font-size: 1.15rem; margin-bottom: 0.5rem; line-height: 1.3; }
+.concept-card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.6; }
+.rover-timeline { margin-top: 3rem; }
+.rover-timeline-row { display: grid; grid-template-columns: 140px 1fr; gap: 1.5rem; padding: 1.25rem 0; border-bottom: 1px solid var(--line); align-items: center; }
+.rover-timeline-row:last-child { border-bottom: none; }
+.rover-timeline-row .year { font-family: var(--mono); font-size: 1.4rem; color: var(--accent); font-weight: bold; }
+.rover-timeline-row .year small { display: block; font-size: 0.7rem; color: var(--text-mute); margin-top: 0.2rem; letter-spacing: 0.04em; }
+.rover-timeline-body h4 { font-family: var(--serif); font-weight: normal; font-size: 1.1rem; margin-bottom: 0.35rem; }
+.rover-timeline-body p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.55; }
+.rover-timeline-body .evo-tag { display: inline-block; font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan); background: rgba(107,181,201,0.1); padding: 0.15rem 0.5rem; border-radius: 100px; margin-bottom: 0.4rem; }
+@media (max-width: 600px) { .rover-timeline-row { grid-template-columns: 1fr; gap: 0.5rem; } }
+
+/* 3D */
+.model3d-grid { display: grid; grid-template-columns: 1fr 340px; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); min-height: 560px; margin-top: 2.5rem; }
+@media (max-width: 900px) { .model3d-grid { grid-template-columns: 1fr; } }
+.model3d-viewport { position: relative; background: #C79462; min-height: 560px; overflow: hidden; touch-action: none; cursor: grab; }
+.model3d-viewport:active { cursor: grabbing; }
+.model3d-viewport canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; outline: none; }
+.model3d-badge { position: absolute; top: 1rem; right: 1rem; font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--bg); background: rgba(255,240,220,0.9); border: 1px solid rgba(0,0,0,0.15); padding: 0.22rem 0.55rem; border-radius: 100px; z-index: 4; pointer-events: none; }
+.model3d-badge.ready { color: var(--bg); background: rgba(200,230,190,0.95); }
+.model3d-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; background: rgba(8,9,12,0.7); color: var(--text-soft); font-family: var(--mono); font-size: 0.85rem; z-index: 10; }
+.model3d-loading[hidden] { display: none; }
+.spinner { width: 26px; height: 26px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.model3d-toolbar { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: 0.25rem; background: rgba(20,22,26,0.92); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 100px; padding: 0.35rem 0.5rem; z-index: 5; }
+.model3d-btn { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: var(--text-soft); transition: background 0.15s, color 0.15s; }
+.model3d-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.model3d-btn[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.model3d-sep { width: 1px; background: var(--line); margin: 0 0.25rem; }
+.model3d-hint { position: absolute; top: 1rem; left: 1rem; font-family: var(--mono); font-size: 0.7rem; color: var(--bg); background: rgba(255,240,220,0.9); padding: 0.3rem 0.6rem; border-radius: var(--radius); z-index: 4; pointer-events: none; animation: fadeHint 6s ease-in-out forwards; }
+@keyframes fadeHint { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+.model3d-hint::after { content: ' · WASD'; }
+
+/* D-PAD */
+.rover-dpad { position: absolute; bottom: 5rem; right: 1rem; display: none; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; z-index: 6; }
+@media (max-width: 900px) { .rover-dpad { display: grid; } }
+.rover-dpad button { background: rgba(20,22,26,0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #EAE5DC; font-size: 1rem; display: flex; align-items: center; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.rover-dpad button:active { background: #D4A24C; color: #0C0D10; border-color: #D4A24C; }
+.rover-dpad .empty { visibility: hidden; }
+
+.model3d-inspector { padding: 1.35rem; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; max-height: 560px; }
+@media (max-width: 900px) { .model3d-inspector { border-left: none; border-top: 1px solid var(--line); max-height: none; } }
+.inspector-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.inspector-header h3 { font-family: var(--serif); font-weight: normal; font-size: 1.3rem; }
+.inspector-desc { color: var(--text-soft); font-size: 0.88rem; line-height: 1.55; }
+.inspector-divider { height: 1px; background: var(--line); margin-block: 0.2rem; }
+.inspector-hint { color: var(--text-mute); font-size: 0.83rem; font-family: var(--mono); line-height: 1.5; }
+.inspector-kicker { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-family: var(--mono); margin-bottom: 0.2rem; }
+#inspectorName { font-family: var(--serif); font-weight: normal; font-size: 1.2rem; margin-bottom: 0.2rem; }
+.inspector-function { color: var(--text-soft); font-size: 0.88rem; margin-bottom: 0.6rem; }
+.inspector-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-block: 0.4rem; }
+.inspector-meta .meta-item { background: var(--surface-2); border-radius: var(--radius); padding: 0.35rem 0.55rem; }
+.inspector-meta .meta-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); font-family: var(--mono); }
+.inspector-meta .meta-value { font-size: 0.82rem; color: var(--text); font-weight: 500; }
+.inspector-science { color: var(--text-soft); font-size: 0.83rem; line-height: 1.55; margin-block: 0.4rem; }
+
+/* DASHBOARD */
+.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+.dash-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.dash-card.span-2 { grid-column: span 2; }
+@media (max-width: 900px) { .dash-card.span-2 { grid-column: span 1; } }
+.dash-card .dash-kicker { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-family: var(--mono); }
+.dash-card .dash-text { color: var(--text-soft); font-size: 0.9rem; flex: 1; }
+.dash-stat { display: flex; align-items: baseline; gap: 0.4rem; font-family: var(--serif); }
+.dash-stat .big { font-size: 2rem; color: var(--accent); }
+.dash-stat .small { color: var(--text-mute); font-size: 0.85rem; }
+.dash-progress { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 0.25rem; }
+.dash-progress > div { height: 100%; background: var(--accent); transition: width 0.4s; }
+.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.badge-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1rem; display: flex; align-items: center; gap: 0.75rem; opacity: 0.5; transition: opacity 0.2s, border-color 0.2s; }
+.badge-card.earned { opacity: 1; border-color: var(--accent); }
+.badge-card .badge-icon { font-size: 1.6rem; flex-shrink: 0; }
+.badge-card .badge-name { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.15rem; }
+.badge-card .badge-desc { font-size: 0.72rem; color: var(--text-mute); line-height: 1.35; }
+
+/* CARDS */
+.level-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.level-group { display: flex; gap: 0.25rem; }
+.level-btn { padding: 0.4rem 0.9rem; border-radius: 100px; font-size: 0.78rem; color: var(--text-mute); border: 1px solid var(--line); transition: all 0.15s; }
+.level-btn[aria-pressed="true"] { color: var(--bg); background: var(--text); border-color: var(--text); }
+.hint-small { color: var(--text-mute); font-size: 0.8rem; font-family: var(--mono); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.25rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; text-align: left; cursor: pointer; transition: border-color 0.15s, transform 0.2s; position: relative; }
+.card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+.card-visual { aspect-ratio: 16/10; background: #0F1115; position: relative; overflow: hidden; }
+.card-visual img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+.card:hover .card-visual img { transform: scale(1.05); }
+.card-visual .progress-strip { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(0,0,0,0.4); }
+.card-visual .progress-strip > div { height: 100%; background: var(--accent); transition: width 0.4s; }
+.card-visual .fav-btn { position: absolute; top: 0.5rem; right: 0.5rem; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.55); color: var(--text); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; z-index: 3; }
+.card-visual .fav-btn.active { color: var(--accent); background: rgba(212,162,76,0.2); }
+.card-body { padding: 1.1rem 1.1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+.card-kicker { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-mute); margin-bottom: 0.35rem; font-family: var(--mono); }
+.card-kind { font-size: 0.68rem; color: var(--cyan); margin-bottom: 0.25rem; }
+.card-image-credit { font-size: 0.68rem; color: var(--text-mute); margin-top: 0.2rem; margin-bottom: 0.55rem; }
+.card-image-credit a { color: var(--text-mute); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.card-image-credit a:hover { color: var(--accent); }
+.card-title { font-family: var(--serif); font-weight: normal; font-size: 1.25rem; line-height: 1.2; margin-bottom: 0.35rem; }
+.card-sub { color: var(--text-soft); font-size: 0.85rem; margin-bottom: 0.6rem; flex: 1; }
+.card-heritage { font-size: 0.76rem; color: var(--accent); font-family: var(--mono); margin-bottom: 0.7rem; padding-top: 0.5rem; border-top: 1px dashed var(--line); line-height: 1.4; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid var(--line); font-size: 0.78rem; }
+.card-progress-text { color: var(--accent); font-family: var(--mono); }
+
+/* STATUS */
+.status { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: var(--radius); background: var(--surface-2); font-family: var(--mono); }
+.status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.status.active { color: var(--ok); }
+.status.inactive { color: var(--text-mute); }
+.status.destroyed { color: var(--ko); }
+.status.trajectory { color: var(--steel); }
+.status.landed { color: var(--steel); }
+.status.planned { color: var(--accent); }
+.verification { font-size: 0.68rem; color: var(--text-mute); font-family: var(--mono); margin-left: 0.35rem; }
+
+/* MYSTERY / COMPARE / TODAY */
+.mystery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+.mystery-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.35rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.mystery-card.solved { border-color: var(--ok); }
+.mystery-card .mystery-status { font-size: 0.68rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-mute); }
+.mystery-card.solved .mystery-status { color: var(--ok); }
+.mystery-card h3 { font-family: var(--serif); font-weight: normal; font-size: 1.15rem; }
+.mystery-card p { color: var(--text-soft); font-size: 0.88rem; line-height: 1.55; flex: 1; }
+
+.compare-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; }
+.compare-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.compare-selects select { background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--text); padding: 0.6rem 0.8rem; border-radius: var(--radius); font-family: var(--sans); font-size: 0.9rem; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.compare-table th, .compare-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.compare-table th { color: var(--text-mute); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono); width: 22%; }
+.compare-table td { color: var(--text-soft); }
+.compare-conclusion { margin-top: 1rem; padding: 0.85rem 1rem; background: var(--accent-soft); border-left: 2px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.85rem; color: var(--text-soft); }
+
+.today-card { display: grid; grid-template-columns: 90px 1fr; gap: 1.5rem; background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); padding: 1.75rem; align-items: center; }
+@media (max-width: 600px) { .today-card { grid-template-columns: 1fr; text-align: center; } }
+.today-card .today-icon { font-size: 3rem; text-align: center; }
+.today-card .today-kicker { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-family: var(--mono); margin-bottom: 0.4rem; }
+.today-card .today-title { font-family: var(--serif); font-weight: normal; font-size: 1.3rem; margin-bottom: 0.5rem; }
+.today-card .today-text { color: var(--text-soft); font-size: 0.92rem; margin-bottom: 0.85rem; }
+
+/* MAP / GLOSSARY / QUIZ */
+.explorer { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
+@media (max-width: 940px) { .explorer { grid-template-columns: 1fr; } }
+.map-frame { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.map-canvas { width: 100%; aspect-ratio: 16/10; background: radial-gradient(ellipse at center, #101217 0%, #0A0B0E 100%); display: block; }
+.map-scale-text { font-family: var(--mono); font-size: 9px; fill: var(--text-mute); }
+.map-scale-line { stroke: var(--line-strong); stroke-width: 1; }
+.map-marker { cursor: pointer; }
+.map-marker circle.dot { transition: r 0.15s; }
+.map-marker:hover circle.dot { r: 9; }
+.map-marker text { font-family: var(--mono); font-size: 10px; fill: var(--text-soft); pointer-events: none; }
+.detail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.35rem; position: sticky; top: 5.5rem; }
+.detail h3 { font-family: var(--serif); font-weight: normal; font-size: 1.25rem; margin-bottom: 0.3rem; }
+.detail .sub { color: var(--text-mute); font-size: 0.8rem; margin-bottom: 0.9rem; font-family: var(--mono); }
+.detail p.body { color: var(--text-soft); font-size: 0.88rem; margin-bottom: 1rem; }
+.detail .empty { color: var(--text-mute); font-size: 0.88rem; font-family: var(--mono); }
+
+.glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.term { padding-top: 0.65rem; border-top: 1px solid var(--line); }
+.term dt { font-family: var(--mono); font-size: 1rem; margin-bottom: 0.3rem; color: var(--text); font-weight: bold; }
+.term dd { color: var(--text-soft); font-size: 0.86rem; }
+
+.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.75rem; max-width: 660px; }
+.quiz-progress { display: flex; gap: 0.3rem; margin-bottom: 1.5rem; }
+.quiz-progress span { flex: 1; height: 2px; background: var(--line); }
+.quiz-progress span.done { background: var(--accent); }
+.quiz-progress span.current { background: var(--text-soft); }
+.quiz-q { font-family: var(--serif); font-weight: normal; font-size: 1.2rem; line-height: 1.35; margin-bottom: 1.25rem; }
+.quiz-opts { display: flex; flex-direction: column; gap: 0.4rem; }
+.quiz-opt { text-align: left; padding: 0.75rem 0.9rem; background: transparent; border: 1px solid var(--line-strong); border-radius: var(--radius); font-size: 0.9rem; color: var(--text); transition: all 0.15s; }
+.quiz-opt:hover:not(:disabled) { border-color: var(--text-soft); background: var(--surface-2); }
+.quiz-opt.correct { border-color: var(--ok); color: var(--ok); }
+.quiz-opt.incorrect { border-color: var(--ko); color: var(--ko); }
+.quiz-feedback { margin-top: 1rem; padding: 0.85rem 1rem; border-left: 2px solid var(--accent); background: var(--accent-soft); font-size: 0.88rem; color: var(--text-soft); }
+.quiz-feedback.ok { border-color: var(--ok); }
+.quiz-feedback.ko { border-color: var(--ko); }
+.quiz-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; gap: 1rem; }
+.quiz-score { font-size: 0.8rem; color: var(--text-mute); font-family: var(--mono); }
+
+/* READING */
+.reading-modal { position: fixed; inset: 0; z-index: 500; background: var(--bg); display: none; overflow-y: auto; }
+.reading-modal.open { display: block; }
+.reading-header { position: sticky; top: 0; z-index: 10; background: rgba(12,13,16,0.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.reading-header-inner { width: min(820px, 100%); margin-inline: auto; padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.reading-close { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--text); flex-shrink: 0; }
+.reading-title-mini { font-family: var(--serif); font-size: 1rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reading-body { width: min(820px, 100%); margin-inline: auto; padding: 2rem 1.25rem 4rem; }
+.reading-cover { aspect-ratio: 16/8; background: var(--surface-2); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; }
+.reading-cover img { width: 100%; height: 100%; object-fit: cover; }
+.reading-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; font-size: 0.78rem; color: var(--text-mute); font-family: var(--mono); }
+.reading-title { font-family: var(--serif); font-weight: normal; font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.15; margin-bottom: 0.4rem; }
+.reading-sub { color: var(--text-soft); font-size: 1rem; margin-bottom: 1.5rem; }
+.reading-level-bar { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 0.35rem; background: var(--surface); border: 1px solid var(--line); border-radius: 100px; width: fit-content; }
+.reading-level-btn { padding: 0.4rem 0.9rem; border-radius: 100px; font-size: 0.78rem; color: var(--text-mute); transition: all 0.15s; }
+.reading-level-btn.active { background: var(--accent); color: var(--bg); }
+.reading-progress-bar { display: flex; gap: 0.25rem; margin-bottom: 1.75rem; }
+.reading-progress-bar span { flex: 1; height: 3px; background: var(--line); border-radius: 2px; cursor: pointer; }
+.reading-progress-bar span.done { background: var(--accent); }
+.reading-progress-bar span.current { background: var(--text); }
+.chapter-nav { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.75rem; margin-bottom: 1.75rem; border-bottom: 1px solid var(--line); }
+.chapter-tab { flex-shrink: 0; padding: 0.5rem 0.85rem; border-radius: var(--radius); font-size: 0.78rem; color: var(--text-mute); border: 1px solid var(--line); background: transparent; white-space: nowrap; transition: all 0.15s; font-family: var(--mono); }
+.chapter-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.chapter-tab.done { color: var(--ok); border-color: var(--ok); }
+.chapter-tab.done.active { background: var(--ok); color: var(--bg); border-color: var(--ok); }
+.chapter-tab.heritage-tab { border-color: rgba(212,162,76,0.4); color: var(--accent); }
+.chapter-tab.heritage-tab.active { background: var(--accent); color: var(--bg); }
+.chapter-content { font-size: 1rem; line-height: 1.75; color: var(--text); }
+.chapter-content h3 { font-family: var(--serif); font-weight: normal; font-size: 1.5rem; margin-bottom: 0.4rem; }
+.chapter-content .chapter-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent); font-family: var(--mono); margin-bottom: 0.5rem; }
+.chapter-content p { margin-bottom: 1rem; color: var(--text-soft); }
+.chapter-content .callout { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 0.9rem 1.1rem; margin-block: 1.25rem; }
+.chapter-content .callout .callout-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); font-family: var(--mono); margin-bottom: 0.3rem; font-weight: 600; }
+.chapter-content .callout p { margin: 0; font-size: 0.9rem; }
+.chapter-content .callout.science { border-left-color: var(--cyan); }
+.chapter-content .callout.science .callout-title { color: var(--cyan); }
+.chapter-content .callout.did-you-know { border-left-color: var(--steel); }
+.chapter-content .callout.did-you-know .callout-title { color: var(--steel); }
+.chapter-content .callout.key { border-left-color: var(--ok); }
+.chapter-content .callout.key .callout-title { color: var(--ok); }
+.chapter-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.chapter-actions .left { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* MODAL */
+.modal { position: fixed; inset: 0; z-index: 500; background: rgba(6,7,9,0.88); display: none; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
+.modal.open { display: flex; }
+.modal-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); width: min(760px, 100%); margin-block: auto; position: relative; }
+.modal-close { position: absolute; top: 0.75rem; right: 0.75rem; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); color: var(--text); display: flex; align-items: center; justify-content: center; font-size: 1rem; z-index: 10; }
+.modal-inner { padding: 2rem 1.75rem 1.75rem; }
+.mystery-clue { background: var(--surface-2); border-radius: var(--radius); padding: 0.85rem 1rem; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-soft); border-left: 2px solid var(--line-strong); }
+.mystery-clue .clue-num { font-family: var(--mono); color: var(--accent); font-size: 0.72rem; margin-right: 0.4rem; }
+.mystery-answer { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 1rem 1.25rem; border-radius: 0 var(--radius) var(--radius) 0; margin-top: 1rem; font-size: 0.9rem; color: var(--text); }
+
+/* FOOTER */
+.footer { border-top: 1px solid var(--line); padding-block: 2.5rem; font-size: 0.85rem; color: var(--text-mute); }
+.footer-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 2rem; align-items: start; }
+@media (max-width: 720px) { .footer-grid { grid-template-columns: 1fr; } }
+.footer-logo { width: 40px; height: 40px; margin-bottom: 0.75rem; }
+.footer p { max-width: 45ch; margin-top: 0.65rem; line-height: 1.6; }
+.footer-note { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem 1.1rem; }
+.footer-note strong { color: var(--text-soft); display: block; margin-bottom: 0.3rem; font-family: var(--mono); font-size: 0.8rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip">Aller au contenu</a>
+
+<div class="search-bar" id="searchBar">
+  <div class="search-inner">
+    <input type="text" id="searchInput" placeholder="Rechercher un équipement…" autocomplete="off">
+    <button class="icon-btn" id="searchClose" aria-label="Fermer">✕</button>
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Logo Discovery">
+        <circle cx="50" cy="50" r="45" stroke="#D4A24C" stroke-width="3"/>
+        <path d="M35 25 H55 C70 25 78 38 78 50 C78 62 70 75 55 75 H35 V25 Z M45 35 V65 H55 C62 65 68 58 68 50 C68 42 62 35 55 35 H45 Z" fill="#D4A24C"/>
+      </svg>
+    </div>
+    <nav class="main-nav" aria-label="Navigation principale">
+      <a href="#intro" class="nav-link">Introduction</a>
+      <a href="#concept" class="nav-link">Pourquoi</a>
+      <a href="#modele3d" class="nav-link">Modèle 3D</a>
+      <a href="#carnet" class="nav-link">Carnet</a>
+      <a href="#objets" class="nav-link">Équipements</a>
+      <a href="#mysteres" class="nav-link">Mystères</a>
+      <a href="#comparer" class="nav-link">Comparer</a>
+      <a href="#carte" class="nav-link">Carte</a>
+      <a href="#quiz" class="nav-link">Quiz</a>
+    </nav>
+    <div class="header-tools">
+      <button class="icon-btn" id="searchOpen" aria-label="Rechercher">🔍</button>
+      <button class="icon-btn" id="favOpen" aria-label="Favoris">★<span class="badge-count" id="favCount" hidden>0</span></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-text">
+        <p class="hero-kicker">Introduction</p>
+        <h1>Rovers et<br>explorateurs<br>de surface.</h1>
+        <p class="hero-sub">Depuis des décennies, robots, véhicules pilotés et sondes explorent la Lune, Mars et l'espace lointain. Découvrez leurs missions, leurs images et les traces qu'ils ont laissées.</p>
+        <div class="hero-actions">
+          <a href="#intro" class="btn btn-primary">Commencer</a>
+          <a href="#modele3d" class="btn btn-ghost">Voir en 3D</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg" alt="Rover Curiosity sur Mars" width="520" height="390" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </section>
+
+  <section class="thread-section">
+    <div class="wrap">
+      <p class="thread-quote">
+        Depuis plusieurs décennies, l'humanité envoie des machines explorer des mondes qu'elle ne peut pas encore atteindre directement. Chacune apporte des réponses, révèle de nouvelles questions et prépare les explorations suivantes.
+      </p>
+    </div>
+  </section>
+
+  <section id="intro" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Introduction</p>
+        <h2 class="section-title">Qu'est-ce qu'un rover ?</h2>
+        <p class="section-sub">Un robot mobile conçu pour explorer la surface d'un autre monde.</p>
+      </div>
+      <div class="intro-grid">
+        <div class="intro-visual">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/1/1f/Sojourner_rover_scheme.jpg" alt="Schéma du rover Sojourner" loading="lazy" decoding="async">
+        </div>
+        <div class="intro-body">
+          <p>Un <strong>rover</strong> est un véhicule robotisé qui se déplace à la surface d'un autre monde : la Lune, Mars, ou une comète. Contrairement à un atterrisseur fixe, il peut se déplacer pour étudier plusieurs sites avec les mêmes instruments.</p>
+          <p>Le premier rover de la NASA à rouler sur Mars est <strong>Sojourner</strong>, en 1997. Il pesait 11 kg. Aujourd'hui, <strong>Curiosity</strong> et <strong>Perseverance</strong> explorent toujours Mars, plusieurs années après leur arrivée.</p>
+          <p>Un rover est un <strong>laboratoire embarqué</strong> : foreuse, spectromètres, caméras, capteurs météo. Chaque instrument répond à des questions scientifiques précises.</p>
+          <div class="intro-facts">
+            <div class="intro-fact"><div class="num">15</div><div class="label">fiches au catalogue</div></div>
+            <div class="intro-fact"><div class="num">1970</div><div class="label">premier rover sur la Lune</div></div>
+            <div class="intro-fact"><div class="num">2</div><div class="label">rovers NASA actifs sur Mars</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="concept" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Le concept</p>
+        <h2 class="section-title">Pourquoi des rovers ?</h2>
+        <p class="section-sub">Un rover répond à un problème simple : comment étudier un monde lointain sans y envoyer d'humain ?</p>
+      </div>
+      <div class="concept-grid">
+        <article class="concept-card">
+          <div class="concept-icon">🔬</div>
+          <h3>Un laboratoire itinérant</h3>
+          <p>Un atterrisseur fixe n'analyse qu'un seul endroit. Un rover peut se déplacer pour étudier plusieurs roches et plusieurs couches géologiques.</p>
+        </article>
+        <article class="concept-card">
+          <div class="concept-icon">⚙️</div>
+          <h3>Six roues, pas quatre</h3>
+          <p>Six roues indépendantes avec suspension permettent de franchir des rochers. Quatre roues seraient moins stables sur un terrain accidenté.</p>
+        </article>
+        <article class="concept-card">
+          <div class="concept-icon">☢️</div>
+          <h3>Une énergie pour l'hiver</h3>
+          <p>Les panneaux solaires de Spirit et Opportunity se couvraient de poussière. Curiosity et Perseverance utilisent un générateur nucléaire.</p>
+        </article>
+        <article class="concept-card">
+          <div class="concept-icon">🧠</div>
+          <h3>Penser seul</h3>
+          <p>Un signal radio met 5 à 20 minutes pour aller de la Terre à Mars. Un rover doit analyser le terrain et choisir sa trajectoire de façon autonome.</p>
+        </article>
+        <article class="concept-card">
+          <div class="concept-icon">🔭</div>
+          <h3>Des instruments sur un mât</h3>
+          <p>Les caméras et spectromètres sont placés en hauteur pour avoir une vue dégagée. Les instruments d'analyse fine sont sur le bras robotique.</p>
+        </article>
+        <article class="concept-card">
+          <div class="concept-icon">📡</div>
+          <h3>Un relais vers la Terre</h3>
+          <p>Les rovers ne communiquent pas directement avec la Terre. Ils passent par des orbiteurs qui relaient les signaux.</p>
+        </article>
+      </div>
+      <div class="rover-timeline">
+        <h3 style="font-family:var(--serif);font-weight:normal;font-size:1.3rem;margin-bottom:0.5rem;">L'évolution en 4 générations</h3>
+        <p style="color:var(--text-soft);font-size:0.95rem;margin-bottom:1.5rem;max-width:60ch;">Chaque génération a ajouté de la mobilité, des instruments et de l'autonomie. La masse a été multipliée par 90 en 25 ans.</p>
+        <div class="rover-timeline-row">
+          <div class="year">1997<small>Sojourner</small></div>
+          <div class="rover-timeline-body">
+            <span class="evo-tag">Génération 1 · Démonstrateur</span>
+            <h4>11 kg — prouver que c'est possible</h4>
+            <p>Un seul instrument (APXS). Objectif : valider qu'un robot peut rouler sur Mars. Il a fonctionné 83 sols.</p>
+          </div>
+        </div>
+        <div class="rover-timeline-row">
+          <div class="year">2004<small>Spirit & Opportunity</small></div>
+          <div class="rover-timeline-body">
+            <span class="evo-tag">Génération 2 · Géologues</span>
+            <h4>185 kg — analyser les roches</h4>
+            <p>Outils de broyage, spectromètres Mössbauer. Découverte d'une Mars humide et acide.</p>
+          </div>
+        </div>
+        <div class="rover-timeline-row">
+          <div class="year">2012<small>Curiosity</small></div>
+          <div class="rover-timeline-body">
+            <span class="evo-tag">Génération 3 · Chimistes</span>
+            <h4>899 kg — chercher l'habitabilité</h4>
+            <p>Laboratoire SAM, forage. Confirmation qu'un ancien lac a réuni les conditions chimiques nécessaires à la vie.</p>
+          </div>
+        </div>
+        <div class="rover-timeline-row">
+          <div class="year">2021<small>Perseverance</small></div>
+          <div class="rover-timeline-body">
+            <span class="evo-tag">Génération 4 · Exobiologistes</span>
+            <h4>1 025 kg — chercher la vie</h4>
+            <p>Carottage, cache d'échantillons. Objectif : détecter des biosignatures et préparer le retour d'échantillons.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="modele3d" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Modèle 3D · Cratère Jezero</p>
+        <h2 class="section-title">Explorez Perseverance en 3D</h2>
+        <p class="section-sub">Le rover dans son environnement martien. Utilisez <strong>W/A/S/D</strong> pour le déplacer, la souris pour tourner autour, la molette pour zoomer.</p>
+      </div>
+      <div class="model3d-grid">
+        <div class="model3d-viewport" id="labViewport">
+          <canvas id="labCanvas" tabindex="0" aria-label="Modèle 3D interactif du rover Perseverance"></canvas>
+          <div class="model3d-badge" id="labBadge">Chargement…</div>
+          <div class="model3d-hint" id="labHint">Déplacer avec les flèches</div>
+          <div class="model3d-loading" id="labLoading" hidden>
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Chargement…</span>
+          </div>
+          <div class="model3d-toolbar" role="toolbar" aria-label="Commandes">
+            <button class="model3d-btn" id="btnReset" title="Réinitialiser">⟲</button>
+            <button class="model3d-btn" id="btnAuto" title="Rotation auto" aria-pressed="false">↻</button>
+            <button class="model3d-btn" id="btnTogglePOI" title="Points" aria-pressed="true">◉</button>
+            <span class="model3d-sep"></span>
+            <button class="model3d-btn" id="btnViewTop" title="Dessus">↥</button>
+            <button class="model3d-btn" id="btnViewSide" title="Latérale">↦</button>
+            <button class="model3d-btn" id="btnViewFront" title="Frontale">↧</button>
+            <button class="model3d-btn" id="btnViewDefault" title="Vue générale">⬡</button>
+            <button class="model3d-btn" id="btnViewWide" title="Vue paysage">🌍</button>
+          </div>
+          <div class="rover-dpad" aria-label="Déplacer le rover">
+            <div class="empty"></div>
+            <button data-move="forward" aria-label="Avancer">↑</button>
+            <div class="empty"></div>
+            <button data-move="left" aria-label="Gauche">←</button>
+            <button data-move="back" aria-label="Reculer">↓</button>
+            <button data-move="right" aria-label="Droite">→</button>
+          </div>
+        </div>
+        <aside class="model3d-inspector">
+          <div class="inspector-header">
+            <h3>Perseverance</h3>
+            <span class="status active">Opérationnel</span>
+          </div>
+          <p class="inspector-desc">Rover laboratoire mobile, en opération dans le cratère Jezero depuis 2021.</p>
+          <div class="inspector-divider"></div>
+          <div id="inspectorDefault">
+            <p class="inspector-hint">Sélectionnez un point doré pour afficher les spécifications d'un instrument. Déplacez le rover avec W/A/S/D ou les flèches.</p>
+          </div>
+          <div id="inspectorDetail" hidden>
+            <p class="inspector-kicker">INSTRUMENT SÉLECTIONNÉ</p>
+            <h4 id="inspectorName"></h4>
+            <p id="inspectorFunction" class="inspector-function"></p>
+            <div class="inspector-meta" id="inspectorMeta"></div>
+            <p id="inspectorScience" class="inspector-science"></p>
+            <button class="btn btn-ghost btn-sm" id="btnBackInspector">← Retour</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="carnet" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Mon carnet</p>
+        <h2 class="section-title">Ma progression</h2>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card span-2">
+          <p class="dash-kicker">Reprendre</p>
+          <div id="dashResume"><p class="dash-text">Aucune lecture en cours.</p></div>
+        </div>
+        <div class="dash-card">
+          <p class="dash-kicker">Chapitres lus</p>
+          <div class="dash-stat"><span class="big" id="dashChaptersRead">0</span><span class="small" id="dashChaptersTotal">/ 0</span></div>
+          <div class="dash-progress"><div id="dashProgressFill" style="width:0%"></div></div>
+          <p class="dash-text" id="dashProgressText">0% complété</p>
+        </div>
+        <div class="dash-card">
+          <p class="dash-kicker">Héritage exploré</p>
+          <div class="dash-stat"><span class="big" id="dashHeritage">0</span><span class="small">équipements</span></div>
+          <p class="dash-text">Leçons d'héritage consultées.</p>
+        </div>
+        <div class="dash-card">
+          <p class="dash-kicker">Badges</p>
+          <div class="dash-stat"><span class="big" id="dashBadges">0</span><span class="small" id="dashBadgesTotal">/ 8</span></div>
+          <p class="dash-text" id="dashNextBadge">Prochain : —</p>
+        </div>
+      </div>
+      <div style="margin-top: 2rem;">
+        <h3 style="font-family: var(--serif); font-weight: normal; font-size: 1.2rem; margin-bottom: 1rem;">Badges</h3>
+        <div class="badges-grid" id="badgesGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="decouverte">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Découverte du jour</p>
+        <h2 class="section-title">Découverte du jour</h2>
+      </div>
+      <div class="today-card" id="todayCard"></div>
+    </div>
+  </section>
+
+  <section id="objets" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Bibliothèque</p>
+        <h2 class="section-title">Rovers et équipements d'exploration</h2>
+      </div>
+      <div class="level-bar">
+        <div class="level-group" role="group" aria-label="Filtre destination">
+          <button class="level-btn" data-filter="all" aria-pressed="true">Tout</button>
+          <button class="level-btn" data-filter="moon" aria-pressed="false">Lune</button>
+          <button class="level-btn" data-filter="mars" aria-pressed="false">Mars</button>
+          <button class="level-btn" data-filter="deep" aria-pressed="false">Espace lointain</button>
+        </div>
+        <p class="hint-small">Les fiches précisent s'il s'agit d'un rover, d'un véhicule piloté, d'un atterrisseur ou d'une sonde.</p>
+      </div>
+      <div class="cards" id="cardsGrid"></div>
+    </div>
+  </section>
+
+  <section id="mysteres" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Enquêtes</p>
+        <h2 class="section-title">Les mystères</h2>
+      </div>
+      <div class="mystery-grid" id="mysteryGrid"></div>
+    </div>
+  </section>
+
+  <section id="comparer" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Comparateur</p>
+        <h2 class="section-title">Comparer deux équipements</h2>
+      </div>
+      <div class="compare-panel">
+        <div class="compare-selects">
+          <select id="compareA"><option value="">— Choisir —</option></select>
+          <select id="compareB"><option value="">— Choisir —</option></select>
+        </div>
+        <div id="compareResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="carte" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Carte</p>
+        <h2 class="section-title">Position dans le Système solaire</h2>
+        <p class="section-sub">Cliquez sur un marqueur pour explorer un équipement. Les positions sont schématiques.</p>
+      </div>
+      <div class="explorer">
+        <div class="map-frame">
+          <svg class="map-canvas" viewBox="0 0 800 500" role="img" aria-label="Carte du Système solaire">
+            <defs>
+              <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#D4A24C" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#D4A24C" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <!-- Échelle -->
+            <line x1="50" y1="460" x2="350" y2="460" class="map-scale-line"/>
+            <text x="50" y="450" class="map-scale-text">0 UA</text>
+            <text x="200" y="450" class="map-scale-text">1 UA</text>
+            <text x="350" y="450" class="map-scale-text">2 UA</text>
+            <!-- Soleil -->
+            <circle cx="400" cy="250" r="30" fill="url(#sunGlow)" opacity="0.6"/>
+            <circle cx="400" cy="250" r="14" fill="#D4A24C"/>
+            <text x="400" y="280" text-anchor="middle" class="map-scale-text">Soleil</text>
+            <!-- Orbites -->
+            <circle cx="400" cy="250" r="90" fill="none" stroke="#262932" stroke-width="1"/>
+            <circle cx="400" cy="250" r="170" fill="none" stroke="#262932" stroke-width="1"/>
+            <circle cx="400" cy="250" r="260" fill="none" stroke="#262932" stroke-width="1"/>
+            <circle cx="400" cy="250" r="340" fill="none" stroke="#262932" stroke-width="1" stroke-dasharray="2 6"/>
+            <text x="575" y="250" class="map-scale-text">1,5 UA (Mars)</text>
+            <!-- Planètes -->
+            <circle cx="310" cy="250" r="4" fill="#7A9AB8"/>
+            <text x="310" y="265" text-anchor="middle" class="map-scale-text">Terre</text>
+            <circle cx="560" cy="180" r="3.5" fill="#C47A5A"/>
+            <text x="560" y="200" class="map-scale-text">Mars</text>
+            <!-- Marqueurs Lune (orbite lunaire schématique autour de la Terre) -->
+            <g class="map-marker" data-id="lunokhod1" tabindex="0" role="button">
+              <circle class="dot" cx="285" cy="235" r="5" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="285" y="253" text-anchor="middle">Lunokhod 1</text>
+            </g>
+            <g class="map-marker" data-id="lunokhod2" tabindex="0" role="button">
+              <circle class="dot" cx="280" cy="260" r="5" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="280" y="278" text-anchor="middle">Lunokhod 2</text>
+            </g>
+            <g class="map-marker" data-id="apollo-lrv" tabindex="0" role="button">
+              <circle class="dot" cx="295" cy="270" r="5" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="295" y="288" text-anchor="middle">LRV Apollo</text>
+            </g>
+            <g class="map-marker" data-id="yutu1" tabindex="0" role="button">
+              <circle class="dot" cx="270" cy="230" r="5" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="270" y="218" text-anchor="middle">Yutu 1</text>
+            </g>
+            <g class="map-marker" data-id="yutu2" tabindex="0" role="button">
+              <circle class="dot" cx="300" cy="225" r="5" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="300" y="213" text-anchor="middle">Yutu 2</text>
+            </g>
+            <!-- Marqueurs Mars -->
+            <g class="map-marker" data-id="curiosity" tabindex="0" role="button">
+              <circle class="dot" cx="575" cy="205" r="6" fill="#6BA86A" stroke="#0C0D10" stroke-width="2"/>
+              <text x="575" y="223" text-anchor="middle">Curiosity</text>
+            </g>
+            <g class="map-marker" data-id="perseverance" tabindex="0" role="button">
+              <circle class="dot" cx="590" cy="195" r="6" fill="#6BA86A" stroke="#0C0D10" stroke-width="2"/>
+              <text x="590" y="213" text-anchor="middle">Perseverance</text>
+            </g>
+            <g class="map-marker" data-id="sojourner" tabindex="0" role="button">
+              <circle class="dot" cx="555" cy="215" r="6" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="555" y="233" text-anchor="middle">Sojourner</text>
+            </g>
+            <g class="map-marker" data-id="spirit" tabindex="0" role="button">
+              <circle class="dot" cx="565" cy="225" r="6" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="565" y="243" text-anchor="middle">Spirit</text>
+            </g>
+            <g class="map-marker" data-id="opportunity" tabindex="0" role="button">
+              <circle class="dot" cx="585" cy="220" r="6" fill="#8E8A80" stroke="#0C0D10" stroke-width="2"/>
+              <text x="585" y="238" text-anchor="middle">Opportunity</text>
+            </g>
+            <!-- Marqueur espace lointain -->
+            <g class="map-marker" data-id="voyager1" tabindex="0" role="button">
+              <circle class="dot" cx="740" cy="60" r="6" fill="#7A9AB8" stroke="#0C0D10" stroke-width="2"/>
+              <text x="740" y="48" text-anchor="middle">Voyager 1</text>
+            </g>
+            <!-- Légende -->
+            <g transform="translate(50, 30)">
+              <circle cx="0" cy="0" r="5" fill="#8E8A80"/><text x="12" y="4" class="map-scale-text">Lune / inactive</text>
+              <circle cx="0" cy="18" r="5" fill="#6BA86A"/><text x="12" y="22" class="map-scale-text">Mars / active</text>
+              <circle cx="0" cy="36" r="5" fill="#7A9AB8"/><text x="12" y="40" class="map-scale-text">Espace lointain</text>
+            </g>
+          </svg>
+        </div>
+        <aside class="detail" id="mapDetail" aria-live="polite">
+          <p class="empty">Sélectionnez un objet céleste.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="mots" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Lexique</p>
+        <h2 class="section-title">Lexique</h2>
+      </div>
+      <dl class="glossary" id="glossaryGrid"></dl>
+    </div>
+  </section>
+
+  <section id="quiz" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="section-kicker">Quiz</p>
+        <h2 class="section-title">Quiz</h2>
+        <p class="section-sub">12 questions pour tester vos connaissances sur les rovers et l'exploration spatiale.</p>
+      </div>
+      <div class="quiz">
+        <div class="quiz-progress" id="quizProgress"></div>
+        <div class="quiz-q" id="quizQuestion">Chargement…</div>
+        <div class="quiz-opts" id="quizOptions"></div>
+        <div class="quiz-feedback" id="quizFeedback" hidden></div>
+        <div class="quiz-foot">
+          <span class="quiz-score" id="quizScore"></span>
+          <button class="btn btn-primary btn-sm" id="quizNext" hidden>Question suivante</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="reading-modal" id="readingModal" role="dialog" aria-modal="true">
+  <div class="reading-header">
+    <div class="reading-header-inner">
+      <button class="reading-close" id="readingClose" aria-label="Fermer">✕</button>
+      <div class="reading-title-mini" id="readingTitleMini">—</div>
+      <button class="icon-btn" id="readingFav" aria-label="Favori">★</button>
+    </div>
+  </div>
+  <div class="reading-body" id="readingBody"></div>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <button class="modal-close" id="modalClose" aria-label="Fermer">✕</button>
+    <div class="modal-inner" id="modalInner"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <svg class="footer-logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Logo Discovery">
+        <circle cx="50" cy="50" r="45" stroke="#D4A24C" stroke-width="3"/>
+        <path d="M35 25 H55 C70 25 78 38 78 50 C78 62 70 75 55 75 H35 V25 Z M45 35 V65 H55 C62 65 68 58 68 50 C68 42 62 35 55 35 H45 Z" fill="#D4A24C"/>
+      </svg>
+      <p>Site éducatif indépendant. Ni affilié à la NASA, ni approuvé par elle.</p>
+    </div>
+    <div class="footer-note">
+      <strong>Sources</strong>
+      <span>Sources des fiches et crédits image indiqués dans chaque fiche. NASA/JPL-Caltech, ESA, agences et auteurs crédités via Wikimedia Commons.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   DONNÉES
+   ============================================================ */
+
+const equipment = [
+  { id:'sojourner', name:'Sojourner', subtitle:'Le premier rover martien de la NASA', kind:'Rover robotisé', kicker:'Mars · 1997', destination:'mars',
+    status:'inactive', verification:'Statut final : septembre 1997',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/PIA01559.jpg?width=900',
+    imageSource:'https://commons.wikimedia.org/wiki/File:PIA01559.jpg', imageCredit:'NASA/JPL · image PIA01559',
+    sources:['jpl.nasa.gov','science.nasa.gov'],
+    heritageShort:'Premier rover mobile sur Mars · a validé la navigation autonome',
+    chapters:[
+      { id:'ch1', kicker:'Chapitre 1', title:'Le contexte',
+        level1:'En 1997, la NASA veut revenir sur Mars avec des missions moins chères.',
+        level2:'Après les Viking de 1976, la NASA met Mars de côté. En 1993, Mars Observer échoue. L\'agence change de stratégie.',
+        level3:'Le programme Discovery impose un budget plafonné à 150 millions de dollars.',
+        level4:'La mission est lancée le 4 décembre 1996 par une Delta II.',
+        callout:{type:'science', title:'En termes simples', text:'Pathfinder et Sojourner sont des missions de démonstration.'}
+      },
+      { id:'ch2', kicker:'Chapitre 2', title:'Le rover',
+        level1:'Sojourner pèse 11 kg, mesure 65 cm de long. Six roues indépendantes.',
+        level2:'Il roule sur six roues avec des suspensions flexibles.',
+        level3:'Le rover embarque un spectromètre APXS.',
+        level4:'L\'APXS utilise des particules alpha pour exciter les atomes.',
+        callout:{type:'did-you-know', title:'Le savais-tu ?', text:'Le nom « Sojourner » vient de Sojourner Truth.'}
+      },
+      { id:'ch3', kicker:'Chapitre 3', title:'Le voyage',
+        level1:'Le voyage dure sept mois.',
+        level2:'Le bouclier thermique ralentit la sonde à 400 m/s.',
+        level3:'La zone d\'atterrissage, Ares Vallis, a été choisie pour son passé aqueux.',
+        level4:'Les airbags sont gonflés à l\'azote juste avant l\'impact.',
+        callout:{type:'science', title:'Comment ça fonctionne ?', text:'Les airbags rebondissent plusieurs fois.'}
+      },
+      { id:'ch4', kicker:'Chapitre 4', title:'Les découvertes',
+        level1:'Sojourner a analysé des roches variées.',
+        level2:'Pendant 83 sols, il parcourt environ 100 mètres.',
+        level3:'Certaines roches sont compatibles avec une altération hydrothermale.',
+        level4:'Sojourner a pris environ 550 images.',
+        callout:{type:'key', title:'À retenir', text:'Sojourner a prouvé qu\'un petit rover pouvait rouler sur Mars.'}
+      },
+      { id:'heritage', kicker:'Héritage', title:'Pourquoi cette machine compte encore', isHeritage:true,
+        level1:'Sojourner n\'a roulé que 100 mètres. Pourtant, il a ouvert la voie à tous les rovers suivants.',
+        level2:'Son APXS a été repris et amélioré sur Spirit, Opportunity, Curiosity et Perseverance. Ses algorithmes de navigation autonome sont à l\'origine du système AutoNav utilisé 25 ans plus tard.',
+        level3:'Aujourd\'hui, les données de Sojourner sur la composition des roches d\'Ares Vallis sont toujours utilisées par les chercheurs.',
+        level4:'Technologies héritées : navigation autonome, APXS, airbags d\'atterrissage, architecture logicielle.',
+        callout:{type:'key', title:'Ce que cela nous a appris', text:'Une mission modeste peut produire un impact scientifique durable.'}
+      }
+    ],
+    mystery:{
+      title:'Le message perdu',
+      intro:'En septembre 1997, les signaux de Pathfinder s\'arrêtent.',
+      clues:['Sojourner fonctionnait sur batterie solaire.','La mission était prévue pour 7 jours.'],
+      question:'Pourquoi la mission s\'est-elle arrêtée après 83 sols ?',
+      answer:'L\'accumulation de poussière et l\'hiver martien ont réduit la production d\'électricité.',
+      explanation:'La mission a duré 12 fois plus longtemps que prévu.'
+    }
+  },
+  { id:'curiosity', name:'Curiosity', subtitle:'Le laboratoire mobile du cratère Gale', kind:'Rover robotisé', kicker:'Mars · depuis 2012', destination:'mars',
+    status:'active', verification:'Statut vérifié janvier 2025',
+    image:'https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg',
+    imageSource:'https://commons.wikimedia.org/wiki/File:Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg', imageCredit:'NASA/JPL-Caltech · Wikimedia Commons',
+    sources:['science.nasa.gov','jpl.nasa.gov'],
+    heritageShort:'A prouvé que Mars a été habitable · 12 ans de données continues',
+    chapters:[
+      { id:'ch1', kicker:'Chapitre 1', title:'La question',
+        level1:'Curiosity cherche si le cratère Gale a réuni les conditions nécessaires à la vie.',
+        level2:'Le cratère Gale contient des dépôts sédimentaires stratifiés.',
+        level3:'Le cratère s\'est formé il y a 3,8 milliards d\'années.',
+        level4:'Curiosity embarque dix instruments.',
+        callout:{type:'science', title:'Pourquoi est-ce important ?', text:'Comprendre l\'habitabilité de Mars aide à comprendre l\'apparition de la vie sur Terre.'}
+      },
+      { id:'ch2', kicker:'Chapitre 2', title:'Le rover',
+        level1:'Curiosity pèse 899 kg et embarque 10 instruments.',
+        level2:'Il est alimenté par un générateur nucléaire (RTG).',
+        level3:'Le RTG fournit environ 110 watts au début de la mission.',
+        level4:'Le système de mobilité permet de franchir des obstacles de 65 cm.',
+        callout:{type:'did-you-know', title:'Le savais-tu ?', text:'Les roues de Curiosity sont en aluminium usiné.'}
+      },
+      { id:'ch3', kicker:'Chapitre 3', title:'L\'arrivée',
+        level1:'Curiosity traverse l\'atmosphère martienne en sept minutes.',
+        level2:'La NASA développe le « sky crane » : une grue volante.',
+        level3:'La séquence : bouclier, parachute, rétrofusées, sky crane.',
+        level4:'Le site d\'atterrissage, Bradbury Landing, mesure 20 km × 7 km.',
+        callout:{type:'key', title:'À retenir', text:'Le sky crane a permis de poser un rover presque une tonne.'}
+      },
+      { id:'ch4', kicker:'Chapitre 4', title:'Le laboratoire',
+        level1:'Curiosity peut forer des roches pour les analyser.',
+        level2:'ChemCam tire un laser à distance. APXS analyse au contact.',
+        level3:'SAM chauffe les échantillons. CheMin utilise la diffraction X.',
+        level4:'La diffraction des rayons X révèle la structure cristalline.',
+        callout:{type:'science', title:'Comment ça fonctionne ?', text:'Chaque minéral produit un motif de diffraction unique.'}
+      },
+      { id:'ch5', kicker:'Chapitre 5', title:'La découverte',
+        level1:'À Yellowknife Bay, Curiosity a trouvé des roches sédimentaires.',
+        level2:'En 2013, il fore deux roches et analyse la poudre.',
+        level3:'Les conditions chimiques sont compatibles avec la vie microbienne.',
+        level4:'Curiosity a détecté des molécules organiques en 2018.',
+        callout:{type:'key', title:'Une découverte étonnante', text:'Curiosity a mesuré un pic de méthane en 2013.'}
+      },
+      { id:'heritage', kicker:'Héritage', title:'Pourquoi cette machine compte encore', isHeritage:true,
+        level1:'Curiosity devait durer 2 ans. Il roule depuis plus de 12 ans.',
+        level2:'Son RTG, son sky crane, son système de forage : tout a été repris et amélioré sur Perseverance. Les instruments de Curiosity ont détecté pour la première fois des molécules organiques martiennes.',
+        level3:'Aujourd\'hui, les données de Curiosity alimentent encore des dizaines de publications scientifiques par an.',
+        level4:'Technologies héritées : RTG, sky crane, système de forage, ChemCam, laboratoire SAM.',
+        callout:{type:'key', title:'Ce que cela nous a appris', text:'Un rover peut fonctionner bien au-delà de sa durée prévue.'}
+      }
+    ],
+    mystery:{
+      title:'Le méthane fantôme',
+      intro:'En 2013, Curiosity détecte un pic de méthane. Puis il disparaît.',
+      clues:['Le méthane se dégrade rapidement sur Mars.','Un pic en 2013, un autre en 2019.'],
+      question:'Pourquoi le méthane apparaît-il et disparaît-il ?',
+      answer:'Des sources localisées produisent du méthane qui se dégrade rapidement.',
+      explanation:'L\'origine exacte reste inconnue.'
+    }
+  },
+  { id:'perseverance', name:'Perseverance', subtitle:'La recherche de traces de vie ancienne', kind:'Rover robotisé', kicker:'Mars · depuis 2021', destination:'mars',
+    status:'active', verification:'Mission toujours active en 2026',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Perseverance_Stuns_in_New_Selfie.png?width=900',
+    imageSource:'https://commons.wikimedia.org/wiki/File:Perseverance_Stuns_in_New_Selfie.png', imageCredit:'NASA/JPL-Caltech/MSSS · selfie du rover, 2026',
+    sources:['science.nasa.gov','jpl.nasa.gov'],
+    heritageShort:'Prépare le retour d\'échantillons · a validé MOXIE et Ingenuity',
+    chapters:[
+      { id:'ch1', kicker:'Chapitre 1', title:'Chercher la vie',
+        level1:'Perseverance cherche des traces de vie dans le cratère Jezero.',
+        level2:'Le cratère a abrité un lac avec un delta de rivière.',
+        level3:'Perseverance embarque sept instruments, dont SHERLOC et PIXL.',
+        level4:'La mission fait partie du programme Mars Sample Return.',
+        callout:{type:'science', title:'Pourquoi est-ce important ?', text:'Rapporter des échantillons permettrait des analyses plus poussées.'}
+      },
+      { id:'ch2', kicker:'Chapitre 2', title:'Le rover',
+        level1:'Perseverance pèse 1 025 kg et transporte Ingenuity.',
+        level2:'Basé sur Curiosity, avec des roues plus résistantes.',
+        level3:'MOXIE produit de l\'oxygène à partir du CO2.',
+        level4:'Ingenuity a effectué 72 vols entre 2021 et 2024.',
+        callout:{type:'did-you-know', title:'Le savais-tu ?', text:'Les roues de Perseverance ont des crampons plus épais.'}
+      },
+      { id:'ch3', kicker:'Chapitre 3', title:'Les découvertes',
+        level1:'Perseverance a analysé des roches du delta de Jezero.',
+        level2:'Certaines contiennent des molécules organiques.',
+        level3:'En 2023, la roche « Cheyava Falls » a montré des signatures organiques.',
+        level4:'Les carbonates peuvent préserver des biosignatures.',
+        callout:{type:'key', title:'À retenir', text:'Pas encore de preuve définitive de vie passée sur Mars.'}
+      },
+      { id:'heritage', kicker:'Héritage', title:'Pourquoi cette machine compte encore', isHeritage:true,
+        level1:'Perseverance prépare la première mission de retour d\'échantillons martiens.',
+        level2:'Les tubes de titane qu\'il dépose depuis 2021 sont destinés à être ramenés sur Terre. Il a aussi validé MOXIE et Ingenuity.',
+        level3:'Aujourd\'hui, les données de Perseverance sur le delta de Jezero sont analysées en temps réel par des équipes internationales.',
+        level4:'Technologies héritées : MOXIE, Ingenuity, SHERLOC et PIXL.',
+        callout:{type:'key', title:'Ce que cela nous a appris', text:'Préparer le retour d\'échantillons demande une planification de plus de dix ans.'}
+      }
+    ],
+    mystery:{
+      title:'La roche de Cheyava Falls',
+      intro:'En 2024, une roche avec des taches sombres intrigue les scientifiques.',
+      clues:['Elle contient des molécules organiques.','Elle contient aussi des carbonates.'],
+      question:'Cette roche est-elle une preuve de vie ancienne ?',
+      answer:'Pas encore. Seule une analyse en laboratoire sur Terre pourra trancher.',
+      explanation:'Les molécules organiques peuvent avoir une origine géologique ou biologique.'
+    }
+  },
+  { id:'voyager1', name:'Voyager 1', subtitle:'Sonde interstellaire — ce n’est pas un rover', kind:'Sonde spatiale', kicker:'Espace lointain · depuis 1977', destination:'deep',
+    status:'active', verification:'Mission active ; source JPL consultée en novembre 2026',
+    image:'https://upload.wikimedia.org/wikipedia/commons/6/60/Voyager_spacecraft_model.png',
+    imageSource:'https://commons.wikimedia.org/wiki/File:Voyager_spacecraft_model.png', imageCredit:'NASA · illustration du vaisseau Voyager',
+    sources:['voyager.jpl.nasa.gov','science.nasa.gov'],
+    heritageShort:'Premier objet humain dans l\'espace interstellaire · toujours actif',
+    chapters:[
+      { id:'ch1', kicker:'Chapitre 1', title:'Le contexte',
+        level1:'Les planètes géantes s\'alignent dans les années 1970.',
+        level2:'Ce phénomène ne se reproduit que tous les 176 ans.',
+        level3:'Chaque survol sert d\'assistance gravitationnelle.',
+        level4:'Voyager 1 et 2 emportent le Golden Record.',
+        callout:{type:'science', title:'Pourquoi est-ce important ?', text:'Deux sondes ont survolé les quatre géantes.'}
+      },
+      { id:'ch2', kicker:'Chapitre 2', title:'La sonde',
+        level1:'Voyager 1 pèse 722 kg et embarque 11 instruments.',
+        level2:'Elle communique via une antenne de 3,7 m de diamètre.',
+        level3:'Le signal met plus de 22 heures à atteindre la Terre.',
+        level4:'La mémoire de stockage est de 536 Mo sur bande magnétique.',
+        callout:{type:'did-you-know', title:'Le savais-tu ?', text:'Voyager 1 est l\'objet artificiel le plus éloigné de la Terre.'}
+      },
+      { id:'ch3', kicker:'Chapitre 3', title:'L\'héliopause',
+        level1:'En août 2012, Voyager 1 franchit l\'héliopause.',
+        level2:'Le passage a été détecté par plusieurs instruments.',
+        level3:'Depuis 2012, Voyager 1 mesure le plasma interstellaire.',
+        level4:'En 2021, une éruption solaire a produit une onde détectable.',
+        callout:{type:'key', title:'À retenir', text:'Voyager 1 est sortie de la bulle du Soleil.'}
+      },
+      { id:'heritage', kicker:'Héritage', title:'Pourquoi cette machine compte encore', isHeritage:true,
+        level1:'Voyager 1 est le premier objet humain à avoir quitté le Système solaire.',
+        level2:'Ses instruments ont mesuré pour la première fois le plasma interstellaire. Ses RTG ont servi à toutes les sondes ultérieures.',
+        level3:'Aujourd\'hui, Voyager 1 continue de transmettre des données depuis l\'espace interstellaire.',
+        level4:'Technologies héritées : RTG au plutonium-238, antenne grand gain, ordinateurs de bord redondants.',
+        callout:{type:'key', title:'Ce que cela nous a appris', text:'Un objet conçu pour 4 ans fonctionne depuis 48 ans.'}
+      }
+    ],
+    mystery:{
+      title:'Le signal affaibli',
+      intro:'En 2023, Voyager 1 envoie des données incompréhensibles.',
+      clues:['Voyager 1 est à plus de 160 UA.','Son ordinateur date des années 1970.'],
+      question:'Pourquoi les données étaient-elles corrompues ?',
+      answer:'Une puce mémoire a été endommagée, probablement par un rayon cosmique.',
+      explanation:'La NASA a reprogrammé l\'ordinateur pour contourner la zone défectueuse.'
+    }
+  }
+];
+
+function buildArchiveChapters(e) {
+  const detail = [e.overview, e.design, e.science, e.precision].filter(Boolean);
+  const legacy = [e.heritage, e.context, e.precision].filter(Boolean);
+  return [
+    { id:'mission', kicker:'Mission', title:'Une machine faite pour explorer',
+      level1:e.overview,
+      level2:[e.overview, e.design].filter(Boolean).join(' '),
+      level3:[e.overview, e.design, e.science].filter(Boolean).join(' '),
+      level4:detail.join(' '),
+      callout:{type:'science', title:e.noteTitle || 'À retenir', text:e.note}
+    },
+    { id:'heritage', kicker:'Héritage', title:'Sa place dans l’exploration', isHeritage:true,
+      level1:e.heritageShort,
+      level2:e.heritage,
+      level3:legacy.join(' '),
+      level4:legacy.join(' '),
+      callout:{type:'key', title:'Ce que cette fiche distingue', text:e.note}
+    }
+  ];
+}
+
+equipment.push(...[
+  { id:'lunokhod1', name:'Lunokhod 1', kind:'Rover robotisé soviétique', subtitle:'Premier rover à opérer sur la Lune', kicker:'Lune · 1970–1971', destination:'moon', status:'inactive', verification:'Mission achevée en 1971',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Lunokhod_1_Revisited_%28LROC402_-_M175502049R_LR1_thumb%29.png?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Lunokhod_1_Revisited_(LROC402_-_M175502049R_LR1_thumb).png', imageCredit:'NASA/GSFC/Arizona State University · image LROC',
+    sources:[{label:'NASA LROC — Lunokhod 1 revisité',url:'https://lroc.im-ldi.com/images/402'},{label:'Image et crédit sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Lunokhod_1_Revisited_(LROC402_-_M175502049R_LR1_thumb).png'}],
+    heritageShort:'Premier rover à parcourir un autre monde', overview:'Déposé par Luna 17 dans la mer des Pluies, Lunokhod 1 a commencé son exploration le 17 novembre 1970.',
+    design:'Il avançait à distance depuis la Terre, avec huit roues, un couvercle solaire et des caméras.', science:'Il a étudié le sol et renvoyé des panoramas ; un réflecteur laser sert encore aux mesures Terre–Lune.',
+    precision:'Il a parcouru environ 10,5 km en 322 jours terrestres.', heritage:'Lunokhod 1 a démontré qu’un véhicule téléguidé pouvait travailler longtemps sur la Lune.', context:'L’image de cette fiche est une vue de l’orbiteur lunaire LRO : l’encart agrandit l’emplacement du rover sur le sol lunaire.',
+    noteTitle:'Une première robotique', note:'Lunokhod 1 était un rover robotisé soviétique, piloté depuis la Terre.'
+  },
+  { id:'lunokhod2', name:'Lunokhod 2', kind:'Rover robotisé soviétique', subtitle:'Le second laboratoire mobile soviétique lunaire', kicker:'Lune · 1973', destination:'moon', status:'inactive', verification:'Mission achevée en 1973',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/LRO_Lunokhod_2.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:LRO_Lunokhod_2.jpg', imageCredit:'NASA · repérage par Lunar Reconnaissance Orbiter',
+    sources:[{label:'NASA LROC — Lunokhod 2 revisité',url:'https://lroc.im-ldi.com/images/699?language=english'},{label:'Mission Luna 21 — NASA NSSDC',url:'https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1973-001A'}],
+    heritageShort:'A parcouru près de 40 km sur la Lune', overview:'Luna 21 a déposé Lunokhod 2 dans le cratère Le Monnier en janvier 1973.',
+    design:'Ce véhicule télécommandé reprend les huit roues et les panneaux solaires de son prédécesseur, avec un ensemble de caméras amélioré.', science:'Il a photographié et mesuré le terrain pendant plusieurs mois, jusqu’à ce que la poussière et la chaleur mettent fin aux opérations.',
+    precision:'Il a parcouru environ 37 km, un record lunaire robotique qui a tenu plusieurs décennies.', heritage:'Lunokhod 2 a montré qu’un rover pouvait couvrir de grandes distances en terrain lunaire.', context:'La fiche s’appuie sur l’image de sa position repérée par l’orbiteur LRO de la NASA.',
+    noteTitle:'Attention au nom', note:'Lunokhod 2 est un rover robotisé ; il ne s’agit pas du véhicule Apollo conduit par des astronautes.'
+  },
+  { id:'apollo-lrv', name:'Jeep lunaire Apollo (LRV)', kind:'Véhicule piloté', subtitle:'Le véhicule électrique conduit par les astronautes', kicker:'Lune · Apollo 15, 16 et 17', destination:'moon', status:'inactive', verification:'Utilisé sur la Lune de 1971 à 1972',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Apollo15LunarRover.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Apollo15LunarRover.jpg', imageCredit:'NASA · Apollo 15',
+    sources:[{label:'NASA — fiche technique des véhicules de surface',url:'https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-023-extraterrestrial-surface-transport-vehicles-rovers.pdf'},{label:'Image Apollo 15 sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Apollo15LunarRover.jpg'}],
+    heritageShort:'A étendu les déplacements des équipages Apollo', overview:'Le Lunar Roving Vehicle transportait deux astronautes et leurs outils pendant les sorties lunaires d’Apollo 15, 16 et 17.',
+    design:'Le véhicule se repliait pour voyager dans le module lunaire. Ses quatre roues étaient entraînées par des moteurs électriques alimentés par batteries.', science:'Les astronautes l’utilisaient pour atteindre plusieurs sites géologiques et rapporter des échantillons.',
+    precision:'Ce véhicule n’était pas autonome : il était conduit à la main par l’équipage.', heritage:'Le LRV a transformé les sorties lunaires en véritables traversées de terrain.', context:'Les trois véhicules Apollo ont été conduits sur la Lune entre 1971 et 1972.',
+    noteTitle:'Un rover avec équipage', note:'« Jeep lunaire » est un surnom : le LRV Apollo était un véhicule électrique piloté, pas un robot.'
+  },
+  { id:'yutu1', name:'Yutu 1', kind:'Rover robotisé chinois', subtitle:'Le premier rover lunaire chinois', kicker:'Lune · 2013–2014', destination:'moon', status:'inactive', verification:'Mission interrompue en 2014',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Yutu_rover.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Yutu_rover.jpg', imageCredit:'Institut de physique des hautes énergies, Académie chinoise des sciences · CC BY 4.0',
+    sources:[{label:'Académie chinoise des sciences — Yutu-2 et images lunaires',url:'https://english.cas.cn/newsroom/news--archives/2023/cas-in-media/202301/t20230128_1126651.shtml'},{label:'Image et licence CC BY 4.0 sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Yutu_rover.jpg'}],
+    heritageShort:'A rétabli l’exploration mobile chinoise sur la Lune', overview:'Yutu, « Lapin de Jade », a été déployé par Chang’e 3 après son alunissage en décembre 2013.',
+    design:'Le rover chinois à six roues pesait environ 140 kg et était alimenté par l’énergie solaire.', science:'Ses caméras, son radar et ses instruments ont étudié le régolithe et le sous-sol lunaire.',
+    precision:'Il a parcouru environ 114 mètres avant qu’une panne mécanique ne l’empêche de reprendre sa route.', heritage:'Yutu a été le premier rover chinois sur la Lune et a ouvert la voie à Chang’e 4.', context:'L’image montre le rover sur le sol lunaire ; le fichier est crédité à l’Académie chinoise des sciences.',
+    noteTitle:'Le premier Yutu', note:'Yutu 1 appartient à Chang’e 3, qui s’est posée sur la face visible de la Lune.'
+  },
+  { id:'yutu2', name:'Yutu 2', kind:'Rover robotisé chinois', subtitle:'Le rover de Chang’e 4, sur la face cachée', kicker:'Lune · depuis 2019', destination:'moon', status:'landed', verification:'État opérationnel actuel non confirmé par une source publique récente',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Yutu-2_leaving_Chang_e-4-iau1901a.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Yutu-2_leaving_Chang_e-4-iau1901a.jpg', imageCredit:'CNSA / International Astronomical Union · CC BY 4.0',
+    sources:[{label:'Académie chinoise des sciences — nouvelles images de Yutu-2',url:'https://english.cas.cn/newsroom/news--archives/2023/cas-in-media/202301/t20230128_1126651.shtml'},{label:'Image et licence CC BY 4.0 sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Yutu-2_leaving_Chang_e-4-iau1901a.jpg'}],
+    heritageShort:'Premier rover à explorer la face cachée de la Lune', overview:'Yutu 2 est le rover de Chang’e 4, mission qui s’est posée dans le cratère Von Kármán en janvier 2019.',
+    design:'Il roule sur six roues et travaille avec le lander et un satellite relais, car la face cachée ne communique pas directement avec la Terre.', science:'Le rover a photographié le terrain et utilisé des instruments pour étudier les roches et le sous-sol.',
+    precision:'Le statut opérationnel actuel n’est pas clairement confirmé par une source officielle récente ; la fiche le classe comme posé sur la Lune.', heritage:'Yutu 2 a réalisé le premier déplacement d’un rover sur la face cachée lunaire.', context:'L’image montre Yutu 2 quittant le lander Chang’e 4 ; le crédit CNSA est indiqué par l’Union astronomique internationale.',
+    noteTitle:'Une première mondiale', note:'« Sur place » décrit sa localisation ; cela ne signifie pas que ses instruments communiquent encore.'
+  },
+  { id:'viking1', name:'Viking 1', kind:'Atterrisseur fixe', subtitle:'Premier atterrisseur américain à réussir sur Mars — pas un rover', kicker:'Mars · 1976–1982', destination:'mars', status:'inactive', verification:'Mission au sol achevée en 1982',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Viking_Lander_1_Martian_Surface.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Viking_Lander_1_Martian_Surface.jpg', imageCredit:'NASA/JPL · panorama Viking 1',
+    sources:[{label:'NASA Science — Viking 1',url:'https://science.nasa.gov/mission/viking-1/'},{label:'Image NASA/JPL sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Viking_Lander_1_Martian_Surface.jpg'}],
+    heritageShort:'Premier atterrissage américain réussi sur Mars', overview:'Viking 1 s’est posé dans Chryse Planitia le 20 juillet 1976 pour étudier Mars depuis un site fixe.',
+    design:'La mission associait un orbiteur et un atterrisseur immobile, équipé d’un bras prélèveur et de caméras.', science:'Ses expériences ont analysé le sol, l’atmosphère et recherché des indices de vie microbienne.',
+    precision:'Viking 1 est resté actif à la surface jusqu’en 1982.', heritage:'Les deux missions Viking ont fourni les premiers examens détaillés du sol martien sur place.',
+    context:'Même si la mission est incluse ici, Viking 1 n’était pas un rover : seul son bras robotisé se déplaçait.',
+    noteTitle:'Pas un rover', note:'Viking 1 était un atterrisseur fixe ; il ne roulait pas à la surface de Mars.'
+  },
+  { id:'viking2', name:'Viking 2', kind:'Atterrisseur fixe', subtitle:'Deuxième laboratoire Viking posé sur Mars — pas un rover', kicker:'Mars · 1976–1980', destination:'mars', status:'inactive', verification:'Mission au sol achevée en 1980',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Viking2lander1.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Viking2lander1.jpg', imageCredit:'NASA · panorama Viking 2',
+    sources:[{label:'NASA Science — Viking 2',url:'https://science.nasa.gov/mission/viking-2/'},{label:'Image NASA sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Viking2lander1.jpg'}],
+    heritageShort:'A étendu l’étude du sol martien à Utopia Planitia', overview:'Viking 2 s’est posé à Utopia Planitia le 3 septembre 1976, après avoir rejoint son orbite martienne.',
+    design:'Comme Viking 1, il s’agissait d’un atterrisseur immobile doté de caméras et d’un bras prélèveur.', science:'Il a photographié le site, creusé des tranchées dans le sol et mesuré les conditions météorologiques.',
+    precision:'Son lander a transmis des données jusqu’en avril 1980.', heritage:'Viking 2 a montré que les conditions martiennes variaient fortement d’un site d’atterrissage à l’autre.',
+    context:'Les deux Vikings étaient des atterrisseurs fixes ; ils n’avaient pas de roues ni de capacité de déplacement.',
+    noteTitle:'Pas un rover', note:'Viking 2 est inclus parmi les équipements d’exploration de surface, mais ce n’était pas un rover.'
+  },
+  { id:'spirit', name:'Spirit', kind:'Rover robotisé NASA', subtitle:'Explorateur du cratère Gusev', kicker:'Mars · 2004–2010', destination:'mars', status:'inactive', verification:'Dernière communication : mars 2010',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Technicians_do_final_checks_on_NASA%E2%80%99s_Spirit_rover_in_this_image_from_March_28%2C_2003_%28nasas-spirit-rover-gets-looked-over%29.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Technicians_do_final_checks_on_NASA%E2%80%99s_Spirit_rover_in_this_image_from_March_28,_2003_(nasas-spirit-rover-gets-looked-over).jpg', imageCredit:'NASA/JPL · préparation du rover Spirit',
+    sources:[{label:'NASA — Mars Exploration Rover: Spirit',url:'https://science.nasa.gov/mission/mer-spirit/'},{label:'Image de Spirit sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Technicians_do_final_checks_on_NASA%E2%80%99s_Spirit_rover_in_this_image_from_March_28,_2003_(nasas-spirit-rover-gets-looked-over).jpg'}],
+    heritageShort:'A trouvé des indices d’anciens environnements aqueux', overview:'Spirit s’est posé dans le cratère Gusev en janvier 2004 avec son jumeau, Opportunity.',
+    design:'Le rover à six roues était alimenté par des panneaux solaires et disposait d’un bras articulé avec des outils scientifiques.', science:'Ses observations de roches et de sols ont révélé des environnements altérés par l’eau, notamment à Home Plate.',
+    precision:'Conçu pour 90 sols, il a fonctionné pendant plus de six ans.', heritage:'Spirit a confirmé que Mars a connu des environnements plus humides dans son passé.',
+    context:'Il s’est enlisé dans un sol meuble en 2009 ; après la perte de contact, la NASA a clos la mission en 2011.',
+    noteTitle:'Jumeau d’Opportunity', note:'Spirit et Opportunity formaient la mission Mars Exploration Rover de la NASA.'
+  },
+  { id:'opportunity', name:'Opportunity', kind:'Rover robotisé NASA', subtitle:'Le rover qui a parcouru la distance d’un marathon', kicker:'Mars · 2004–2018', destination:'mars', status:'inactive', verification:'Mission déclarée terminée en 2019',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/PIA17759-MarsOpportunityRover-SelfPortrait-20140106.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:PIA17759-MarsOpportunityRover-SelfPortrait-20140106.jpg', imageCredit:'NASA/JPL-Caltech/Cornell/ASU · autoportrait',
+    sources:[{label:'NASA — fin de la mission Opportunity',url:'https://science.nasa.gov/mission/mer-opportunity/'},{label:'Image PIA17759 sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:PIA17759-MarsOpportunityRover-SelfPortrait-20140106.jpg'}],
+    heritageShort:'A parcouru plus de 45 km sur Mars', overview:'Opportunity s’est posé à Meridiani Planum en janvier 2004, quelques semaines après Spirit.',
+    design:'Ses panneaux solaires alimentaient six roues, des caméras et des instruments montés sur un bras robotisé.', science:'Il a trouvé des roches et des minéraux témoignant d’une présence ancienne d’eau liquide.',
+    precision:'Il a roulé 45,16 km et travaillé pendant près de quinze ans, bien au-delà de sa mission initiale de 90 sols.', heritage:'Opportunity a établi la durée de vie et la distance parcourue les plus longues d’un rover martien de la NASA à son époque.',
+    context:'Une tempête globale de poussière a réduit l’énergie solaire disponible ; la dernière communication date de juin 2018.',
+    noteTitle:'Le marathon martien', note:'La NASA a déclaré la mission terminée en février 2019, après des mois sans réponse.'
+  },
+  { id:'zhurong', name:'Zhurong', kind:'Rover robotisé chinois', subtitle:'Premier rover chinois sur Mars', kicker:'Mars · 2021–2022', destination:'mars', status:'inactive', verification:'Aucune reprise de contact annoncée depuis 2022',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Zhurong-with-lander-selfie-flat.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Zhurong-with-lander-selfie-flat.jpg', imageCredit:'CNSA / China News Service · CC BY 4.0',
+    sources:[{label:'CNSA — mission Tianwen-1 et état de Zhurong',url:'https://www.cnsa.gov.cn/english/n6465652/n6465653/c10003737/content.html'},{label:'Image et licence CC BY 4.0 sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Zhurong-with-lander-selfie-flat.jpg'}],
+    heritageShort:'A rendu la Chine opérationnelle sur la surface de Mars', overview:'Zhurong a atterri dans Utopia Planitia en mai 2021, au sein de la mission chinoise Tianwen-1.',
+    design:'Ce rover solaire à six roues transportait des caméras, un radar de sous-sol, un spectromètre et des capteurs météorologiques.', science:'Il a étudié des roches, des dunes et les couches superficielles du terrain martien.',
+    precision:'Le rover a dépassé sa mission nominale de 90 jours martiens avant d’entrer en hibernation.', heritage:'Zhurong fut le premier rover chinois à se poser et travailler sur Mars.',
+    context:'La CNSA l’a déclaré en dormance en 2022 ; aucune reprise de contact n’est confirmée par une annonce officielle récente.',
+    noteTitle:'Mission chinoise', note:'L’image est un autoportrait de Zhurong et de son lander, transmis par la caméra largable de Tianwen-1.'
+  },
+  { id:'rosalind-franklin', name:'Rosalind Franklin', kind:'Rover robotisé ESA', subtitle:'Futur rover européen de recherche de traces de vie', kicker:'Mars · lancement prévu en 2028', destination:'mars', status:'planned', verification:'Mission planifiée ; arrivée visée en 2030',
+    image:'https://commons.wikimedia.org/wiki/Special:FilePath/Rosalind_Franklin_rover_2024.jpg?width=900', imageSource:'https://commons.wikimedia.org/wiki/File:Rosalind_Franklin_rover_2024.jpg', imageCredit:'Mike Peel · maquette du rover, Wikimedia Commons',
+    sources:[{label:'ESA — mission Rosalind Franklin',url:'https://www.esa.int/missions/about-us/directorates/human-and-robotic-exploration/mars/exomars/rosalind-franklin-rover'},{label:'NASA — soutien à la mission ESA',url:'https://science.nasa.gov/blogs/mars-rosa/2026/04/16/nasa-begins-implementation-for-esas-rosalind-franklin-mission-to-mars/'},{label:'Crédit de la maquette sur Wikimedia Commons',url:'https://commons.wikimedia.org/wiki/File:Rosalind_Franklin_rover_2024.jpg'}],
+    heritageShort:'Doit forer jusqu’à deux mètres sous la surface martienne', overview:'Rosalind Franklin est le rover de la mission ExoMars de l’ESA, avec une contribution importante de la NASA.',
+    design:'Le rover à six roues transportera huit instruments et une foreuse conçue pour prélever des échantillons jusqu’à deux mètres de profondeur.', science:'Il cherchera des traces de vie ancienne dans le sous-sol, mieux protégé des radiations que la surface.',
+    precision:'Le lancement est visé en 2028 et l’arrivée sur Mars en 2030 ; le calendrier reste prévisionnel.', heritage:'La foreuse profonde doit permettre d’étudier des matériaux martiens jusque-là inaccessibles aux rovers de surface.',
+    context:'L’image choisie représente une maquette terrestre du rover, pas une photographie prise sur Mars.',
+    noteTitle:'Une mission à venir', note:'Rosalind Franklin n’a pas encore été lancée ; sa date de lancement reste planifiée pour 2028.'
+  }
+].map(e => ({...e, chapters:buildArchiveChapters(e)})));
+
+/* NOUVEAU : découvertes du jour enrichies */
+const dailyDiscoveries = [
+  { icon:'🌡️', title:'Pourquoi plusieurs caméras ?', text:'Navigation, panorama, science.', detail:'Chaque caméra a un rôle : les caméras de navigation évitent les obstacles, les caméras panoramiques documentent le paysage, les caméras scientifiques analysent les roches. Sur Curiosity, la Mastcam seule peut zoomer de 1 à 10.', link:'curiosity' },
+  { icon:'📡', title:'Voyager à 24 milliards de km', text:'Antenne de 3,7 m côté sonde, 70 m côté Terre.', detail:'Le signal met plus de 22 heures pour parcourir la distance. Malgré cela, Voyager 1 continue de transmettre des données sur le plasma interstellaire avec une puissance de quelques watts seulement.', link:'voyager1' },
+  { icon:'🪨', title:'Analyser une roche sans la toucher', text:'Laser ou rayons X.', detail:'ChemCam sur Curiosity utilise un laser infrarouge pour vaporiser une petite quantité de roche à 7 mètres de distance. Le spectre de la lumière émise révèle la composition chimique.', link:'curiosity' },
+  { icon:'🛞', title:'Des roues qui durent', text:'Aluminium usiné avec crampons.', detail:'Les roues de Spirit et Opportunity se sont usées plus vite que prévu sur les roches coupantes de Mars. Curiosity a hérité de roues renforcées, et Perseverance de crampons encore plus épais et d’un revêtement plus résistant.', link:'perseverance' },
+  { icon:'🔬', title:'MOXIE : produire de l\'oxygène sur Mars', text:'À partir du CO2 atmosphérique.', detail:'MOXIE a produit de l’oxygène à partir du dioxyde de carbone martien entre 2021 et 2023. Un test réussi qui pourrait un jour permettre de produire du propergol ou de l’air respirable pour des astronautes.', link:'perseverance' },
+  { icon:'🌍', title:'La face cachée de la Lune', text:'Yutu 2 explore Von Kármán.', detail:'La face cachée de la Lune ne pointe jamais vers la Terre. Yutu 2 communique via un satellite relais en orbite lunaire. Il a découvert des roches provenant du manteau lunaire.', link:'yutu2' },
+  { icon:'⚡', title:'RTG : une énergie nucléaire', text:'Plutonium-238 et effet Seebeck.', detail:'Un RTG convertit la chaleur de la désintégration du plutonium-238 en électricité. Curiosity et Perseverance en utilisent un pour survivre aux hivers martiens et aux tempêtes de poussière.', link:'curiosity' },
+  { icon:'📸', title:'Le selfie martien', text:'Comment les rovers prennent-ils leur propre photo ?', detail:'Les selfies de Curiosity et Perseverance sont en réalité des mosaïques de dizaines d’images prises par la caméra située au bout du bras robotique, ensuite assemblées par ordinateur.', link:'perseverance' }
+];
+
+/* NOUVEAU : badges enrichis (toujours 8 mais conditions plus variées) */
+const BADGES = [
+  { id:'first-contact', name:'Premier contact', icon:'🌍', desc:'Premier chapitre terminé' },
+  { id:'geologue', name:'Géologue spatial', icon:'🪨', desc:'3 équipements Mars étudiés' },
+  { id:'ingenieur', name:'Ingénieur explorateur', icon:'⚙️', desc:'4 instruments inspectés' },
+  { id:'archiviste', name:'Archiviste', icon:'📚', desc:'3 favoris' },
+  { id:'voyageur', name:'Voyageur', icon:'🚀', desc:'3 destinations explorées' },
+  { id:'enqueteur', name:'Enquêteur', icon:'🔍', desc:'3 mystères résolus' },
+  { id:'explorateur', name:'Explorateur', icon:'🏆', desc:'3 équipements terminés' },
+  { id:'heritage', name:'Gardien de la mémoire', icon:'📜', desc:'3 héritages consultés' }
+];
+
+/* NOUVEAU : quiz enrichi à 12 questions */
+const quizData = [
+  { q:'Quel instrument analyse les roches à distance sur Curiosity ?', opts:['ChemCam','SAM','CheMin','APXS'], answer:0, exp:'ChemCam utilise un laser pour vaporiser une petite quantité de roche et analyser la lumière émise.' },
+  { q:'Quel laboratoire a détecté des molécules organiques sur Mars ?', opts:['SAM','RAD','REMS','Mastcam'], answer:0, exp:'SAM (Sample Analysis at Mars) chauffe les échantillons pour libérer et analyser les gaz.' },
+  { q:'Quel rover a utilisé l\'APXS en 1997 ?', opts:['Sojourner','Curiosity','Spirit','Perseverance'], answer:0, exp:'Sojourner était équipé d\'un spectromètre APXS pour analyser la composition des roches.' },
+  { q:'Quel rover a servi de base technologique à Perseverance ?', opts:['Curiosity','Sojourner','Voyager 1','Spirit'], answer:0, exp:'Perseverance reprend l\'architecture de Curiosity (châssis, RTG, sky crane) avec des améliorations.' },
+  { q:'Quel instrument de Perseverance a produit de l\'oxygène sur Mars ?', opts:['MOXIE','SAM','ChemCam','PIXL'], answer:0, exp:'MOXIE a produit de l\'oxygène à partir du CO2 atmosphérique martien entre 2021 et 2023.' },
+  { q:'Pourquoi Voyager 1 reste-t-elle importante aujourd\'hui ?', opts:['Elle étudie le milieu interstellaire','Elle prend des photos de la Terre','Elle sert de relais radio','Elle guide les rovers'], answer:0, exp:'Voyager 1 mesure le plasma et le champ magnétique de l\'espace interstellaire depuis 2012.' },
+  { q:'Quel rover a parcouru le plus long chemin sur Mars ?', opts:['Opportunity','Spirit','Curiosity','Sojourner'], answer:0, exp:'Opportunity a parcouru 45,16 km, établissant un record pour un rover de la NASA.' },
+  { q:'Quel est le nom du premier rover chinois sur la Lune ?', opts:['Yutu 1','Zhurong','Lunokhod 1','Chang\'e 3'], answer:0, exp:'Yutu 1 a été déployé par Chang\'e 3 en décembre 2013.' },
+  { q:'Quel rover européen doit forer jusqu\'à 2 mètres de profondeur ?', opts:['Rosalind Franklin','Zhurong','Perseverance','Curiosity'], answer:0, exp:'Rosalind Franklin (ExoMars) emporte une foreuse conçue pour atteindre 2 m sous la surface.' },
+  { q:'Quel véhicule lunaire était piloté par des astronautes ?', opts:['Le LRV Apollo','Lunokhod 1','Yutu 2','Sojourner'], answer:0, exp:'Le Lunar Roving Vehicle (LRV) des missions Apollo 15, 16 et 17 était conduit par les astronautes.' },
+  { q:'Quel rover a utilisé les airbags pour atterrir ?', opts:['Sojourner','Curiosity','Perseverance','Voyager 1'], answer:0, exp:'Pathfinder/Sojourner, Spirit et Opportunity ont utilisé des airbags. Curiosity et Perseverance ont utilisé le sky crane.' },
+  { q:'Quel rover a mesuré un pic de méthane en 2013 puis en 2019 ?', opts:['Curiosity','Perseverance','Spirit','Opportunity'], answer:0, exp:'Curiosity a détecté des pics de méthane dont l\'origine reste encore débattue.' }
+];
+
+/* NOUVEAU : mystères supplémentaires (ajoutés à la liste existante via equipment) */
+/* Les mystères supplémentaires sont définis directement dans les fiches equipment. */
+
+const INSTRUMENT_IDS = ['mastcam','supercam','pixl','meda'];
+
+/* ============================================================
+   NOTIFICATION / PROGRESSION
+   ============================================================ */
+
+const Notebook = {
+  KEY: 'discovery_notebook_v5',
+  data: { chaptersRead:{}, equipmentCompleted:{}, favorites:[], badges:[], mysteriesSolved:[], lastRead:null, instrumentsInspected:[], heritageRead:{} },
+  load() {
+    try { const raw = localStorage.getItem(this.KEY); if (raw) Object.assign(this.data, JSON.parse(raw)); } catch(e) {}
+    this.data.favorites = this.data.favorites.filter(id => equipment.find(e => e.id === id));
+    this.data.instrumentsInspected = [...new Set(this.data.instrumentsInspected)].filter(id => INSTRUMENT_IDS.includes(id));
+  },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch(e) {} this.checkBadges(); },
+  markChapterRead(eqId, chId) {
+    if (!this.data.chaptersRead[eqId]) this.data.chaptersRead[eqId] = [];
+    if (!this.data.chaptersRead[eqId].includes(chId)) this.data.chaptersRead[eqId].push(chId);
+    if (chId === 'heritage') this.data.heritageRead[eqId] = true;
+    const eq = equipment.find(e => e.id === eqId);
+    if (eq && this.data.chaptersRead[eqId].length >= eq.chapters.length) this.data.equipmentCompleted[eqId] = true;
+    this.data.lastRead = { eqId, chId, timestamp: Date.now() };
+    this.save(); updateDashboard(); updateAllCardProgress();
+  },
+  isChapterRead(eqId, chId) { return (this.data.chaptersRead[eqId] || []).includes(chId); },
+  toggleFavorite(eqId) {
+    const i = this.data.favorites.indexOf(eqId);
+    if (i >= 0) this.data.favorites.splice(i, 1); else this.data.favorites.push(eqId);
+    this.save(); updateFavoritesUI(); updateAllCardProgress();
+  },
+  isFavorite(eqId) { return this.data.favorites.includes(eqId); },
+  inspectInstrument(id) { if (!this.data.instrumentsInspected.includes(id)) { this.data.instrumentsInspected.push(id); this.save(); } },
+  solveMystery(id) { if (!this.data.mysteriesSolved.includes(id)) { this.data.mysteriesSolved.push(id); this.save(); } },
+  setLastRead(eqId, chId) { this.data.lastRead = { eqId, chId, timestamp: Date.now() }; this.save(); },
+  getProgress(eqId) {
+    const eq = equipment.find(e => e.id === eqId);
+    if (!eq) return { read:0, total:0, percent:0 };
+    const read = (this.data.chaptersRead[eqId] || []).length;
+    return { read, total: eq.chapters.length, percent: Math.round((read / eq.chapters.length) * 100) };
+  },
+  getTotalProgress() {
+    let read = 0, total = 0;
+    equipment.forEach(eq => { total += eq.chapters.length; read += (this.data.chaptersRead[eq.id] || []).length; });
+    return { read, total, percent: total > 0 ? Math.round((read / total) * 100) : 0 };
+  },
+  getHeritageCount() { return Object.keys(this.data.heritageRead || {}).filter(k => this.data.heritageRead[k]).length; },
+  checkBadges() {
+    const earned = new Set(this.data.badges);
+    const newBadges = [];
+    if (this.getTotalProgress().read >= 1) earned.add('first-contact');
+    const marsEq = ['sojourner','curiosity','perseverance'];
+    if (marsEq.filter(id => (this.data.chaptersRead[id] || []).length > 0).length >= 3) earned.add('geologue');
+    if (this.data.instrumentsInspected.length >= 4) earned.add('ingenieur');
+    if (this.data.favorites.length >= 3) earned.add('archiviste');
+    const dests = new Set();
+    Object.keys(this.data.chaptersRead).forEach(id => {
+      const eq = equipment.find(e => e.id === id);
+      if (eq && (this.data.chaptersRead[id] || []).length > 0) dests.add(eq.destination);
+    });
+    if (dests.size >= 3) earned.add('voyageur');
+    if (this.data.mysteriesSolved.length >= 3) earned.add('enqueteur');
+    if (Object.keys(this.data.equipmentCompleted).length >= 3) earned.add('explorateur');
+    if (this.getHeritageCount() >= 3) earned.add('heritage');
+    [...earned].forEach(id => { if (!this.data.badges.includes(id)) { this.data.badges.push(id); newBadges.push(id); } });
+    if (newBadges.length) {
+      this.data.badges = [...earned];
+      try { localStorage.setItem(this.KEY, JSON.stringify(this.data)); } catch(e) {}
+      newBadges.forEach(id => showBadgeToast(id));
+    }
+  }
+};
+window.Notebook = Notebook;
+
+let currentObjFilter = 'all';
+let currentReadingEq = null;
+let currentReadingCh = 0;
+let currentReadingLevel = 2;
+
+const $ = (s, c = document) => c.querySelector(s);
+const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+function esc(str) { return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function statusLabel(s) { return ({active:'Opérationnel', inactive:'Hors service', destroyed:'Détruit', trajectory:'Trajectoire libre', landed:'Localisé sur la Lune', planned:'À venir'})[s] || s; }
+function statusBadge(s) { return `<span class="status ${s}">${statusLabel(s)}</span>`; }
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+
+function updateDashboard() {
+  const total = Notebook.getTotalProgress();
+  $('#dashChaptersRead').textContent = total.read;
+  $('#dashChaptersTotal').textContent = '/ ' + total.total;
+  $('#dashProgressFill').style.width = total.percent + '%';
+  $('#dashProgressText').textContent = total.percent + '% complété';
+  $('#dashHeritage').textContent = Notebook.getHeritageCount();
+  $('#dashBadges').textContent = Notebook.data.badges.length;
+  $('#dashBadgesTotal').textContent = '/ ' + BADGES.length;
+  const nextBadge = BADGES.find(b => !Notebook.data.badges.includes(b.id));
+  $('#dashNextBadge').textContent = nextBadge ? `Prochain : ${nextBadge.name}` : 'Tous obtenus !';
+  $('#badgesGrid').innerHTML = BADGES.map(b => {
+    const earned = Notebook.data.badges.includes(b.id);
+    return `<div class="badge-card ${earned ? 'earned' : ''}"><div class="badge-icon">${b.icon}</div><div class="badge-body"><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div></div></div>`;
+  }).join('');
+  renderResume();
+}
+
+function renderResume() {
+  const last = Notebook.data.lastRead;
+  const dash = $('#dashResume');
+  if (!last || !equipment.find(e => e.id === last.eqId)) {
+    dash.innerHTML = `<p class="dash-text">Aucune lecture en cours.</p>`;
+    return;
+  }
+  const eq = equipment.find(e => e.id === last.eqId);
+  const ch = eq.chapters.find(c => c.id === last.chId) || eq.chapters[0];
+  const prog = Notebook.getProgress(eq.id);
+  dash.innerHTML = `<p class="dash-text"><strong>Dernière lecture :</strong> ${esc(eq.name)} — ${esc(ch.title)}</p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem;">
+      <button class="btn btn-primary btn-sm" onclick="openReading('${eq.id}', '${ch.id}')">Reprendre</button>
+      <span style="font-size:0.82rem;color:var(--text-mute);">${prog.read}/${prog.total} chapitres lus</span>
+    </div>`;
+}
+
+function showBadgeToast(badgeId) {
+  const badge = BADGES.find(b => b.id === badgeId);
+  if (!badge) return;
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:0.75rem 1.25rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;align-items:center;gap:0.75rem;';
+  toast.innerHTML = `<span style="font-size:1.6rem;">${badge.icon}</span><div><div style="font-size:0.7rem;text-transform:uppercase;color:var(--accent);font-family:monospace;">Badge obtenu</div><div style="font-weight:600;">${badge.name}</div></div>`;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.4s'; setTimeout(() => toast.remove(), 400); }, 3500);
+}
+
+function updateAllCardProgress() {
+  $$('.card').forEach(card => {
+    const id = card.dataset.id;
+    const prog = Notebook.getProgress(id);
+    const strip = card.querySelector('.progress-strip > div');
+    if (strip) strip.style.width = prog.percent + '%';
+    const foot = card.querySelector('.card-progress-text');
+    if (foot) foot.textContent = `${prog.read}/${prog.total}`;
+    const favBtn = card.querySelector('.fav-btn');
+    if (favBtn) { const active = Notebook.isFavorite(id); favBtn.classList.toggle('active', active); favBtn.textContent = active ? '★' : '☆'; }
+  });
+  updateFavCount();
+}
+
+/* ============================================================
+   CARTES
+   ============================================================ */
+
+function renderCards() {
+  const list = currentObjFilter === 'all' ? equipment : equipment.filter(e => e.destination === currentObjFilter);
+  const grid = $('#cardsGrid');
+  grid.innerHTML = list.map(e => {
+    const prog = Notebook.getProgress(e.id);
+    const isFav = Notebook.isFavorite(e.id);
+    const completed = Notebook.data.equipmentCompleted[e.id];
+    return `<div class="card" data-id="${e.id}" tabindex="0" role="button">
+      <div class="card-visual">
+        <img src="${e.image}" alt="${esc(e.name)}" loading="lazy" onerror="this.style.display='none'">
+        <button class="fav-btn ${isFav ? 'active' : ''}" data-fav="${e.id}">${isFav ? '★' : '☆'}</button>
+        <div class="progress-strip"><div style="width:${prog.percent}%"></div></div>
+      </div>
+      <div class="card-body">
+        <p class="card-kind">${esc(e.kind || 'Équipement spatial')}</p>
+        <p class="card-kicker">${esc(e.kicker)}</p>
+        <h3 class="card-title">${esc(e.name)}</h3>
+        <p class="card-sub">${esc(e.subtitle)}</p>
+        <p class="card-image-credit"><a class="img-credit" href="${esc(e.imageSource || '#')}" target="_blank" rel="noopener">Image : ${esc(e.imageCredit || 'source à vérifier')}</a></p>
+        <p class="card-heritage">📜 ${esc(e.heritageShort)}</p>
+        <div class="card-foot">${statusBadge(e.status)}<span class="card-progress-text">${prog.read}/${prog.total}${completed ? ' ✓' : ''}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  $$('.card').forEach(card => {
+    card.addEventListener('click', ev => {
+      if (ev.target.closest('.fav-btn, .img-credit')) return;
+      const last = Notebook.data.lastRead;
+      const lastCh = last && last.eqId === card.dataset.id ? last.chId : null;
+      openReading(card.dataset.id, lastCh);
+    });
+  });
+  $$('.fav-btn').forEach(btn => btn.addEventListener('click', ev => { ev.stopPropagation(); Notebook.toggleFavorite(btn.dataset.fav); }));
+}
+
+/* ============================================================
+   LECTURE
+   ============================================================ */
+
+function openReading(eqId, chId) {
+  const eq = equipment.find(e => e.id === eqId);
+  if (!eq) return;
+  currentReadingEq = eq;
+  let idx = chId ? eq.chapters.findIndex(c => c.id === chId) : 0;
+  if (idx < 0) idx = 0;
+  currentReadingCh = idx;
+  renderReading();
+  $('#readingModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  window.scrollTo(0, 0);
+}
+window.openReading = openReading;
+
+function closeReading() {
+  $('#readingModal').classList.remove('open');
+  document.body.style.overflow = '';
+  currentReadingEq = null;
+  updateDashboard();
+  updateAllCardProgress();
+}
+
+function renderReading() {
+  const eq = currentReadingEq;
+  const ch = eq.chapters[currentReadingCh];
+  const prog = Notebook.getProgress(eq.id);
+  const isFav = Notebook.isFavorite(eq.id);
+  const isRead = Notebook.isChapterRead(eq.id, ch.id);
+  $('#readingTitleMini').textContent = `${eq.name} · ${ch.title}`;
+  const favBtn = $('#readingFav');
+  favBtn.textContent = isFav ? '★' : '☆';
+  favBtn.style.color = isFav ? 'var(--accent)' : '';
+
+  const tabsHtml = eq.chapters.map((c, i) => {
+    const read = Notebook.isChapterRead(eq.id, c.id);
+    const active = i === currentReadingCh;
+    const cls = `${active ? 'active' : ''} ${read && !active ? 'done' : ''} ${c.isHeritage ? 'heritage-tab' : ''}`;
+    const label = c.isHeritage ? '📜 Héritage' : `Ch. ${i+1}`;
+    return `<button class="chapter-tab ${cls}" data-chidx="${i}">${label} ${read ? '✓' : ''}</button>`;
+  }).join('');
+
+  const levelBtns = [1,2,3,4].map(n => `<button class="reading-level-btn ${currentReadingLevel === n ? 'active' : ''}" data-level="${n}">Niveau ${n}</button>`).join('');
+
+  $('#readingBody').innerHTML = `
+    <div class="reading-cover"><img src="${eq.image}" alt="${esc(eq.name)}" onerror="this.style.display='none'"></div>
+    <div class="reading-meta">${statusBadge(eq.status)}<span class="verification">${esc(eq.verification)}</span><span>·</span><span>${prog.read}/${prog.total} chapitres lus</span></div>
+    <h1 class="reading-title">${esc(eq.name)}</h1>
+    <p class="reading-sub">${esc(eq.subtitle)}</p>
+    <div class="reading-progress-bar">${eq.chapters.map((c, i) => {
+      const read = Notebook.isChapterRead(eq.id, c.id);
+      const cur = i === currentReadingCh;
+      return `<span class="${read ? 'done' : ''} ${cur ? 'current' : ''}" data-chidx="${i}"></span>`;
+    }).join('')}</div>
+    <div class="chapter-nav">${tabsHtml}</div>
+    <div class="reading-level-bar">${levelBtns}</div>
+    <div class="chapter-content">
+      <p class="chapter-kicker">${ch.isHeritage ? '📜 ' : ''}${esc(ch.kicker)}</p>
+      <h3>${esc(ch.title)}</h3>
+      <p>${esc(ch['level' + currentReadingLevel] || ch.level1)}</p>
+      ${ch.callout ? `<div class="callout ${ch.callout.type}"><div class="callout-title">${esc(ch.callout.title)}</div><p>${esc(ch.callout.text)}</p></div>` : ''}
+    </div>
+    <div class="chapter-actions">
+      <div class="left">
+        <button class="btn btn-ghost btn-sm" id="prevCh" ${currentReadingCh === 0 ? 'disabled' : ''}>← Précédent</button>
+        <button class="btn btn-ghost btn-sm" id="nextCh" ${currentReadingCh === eq.chapters.length - 1 ? 'disabled' : ''}>Suivant →</button>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" id="markRead" ${isRead ? 'disabled' : ''}>${isRead ? '✓ Lu' : 'Marquer comme lu'}</button>
+      </div>
+    </div>
+    <div style="margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line);font-size:0.8rem;color:var(--text-mute);">
+      <strong>Sources :</strong> ${eq.sources.map(s => typeof s === 'string' ? `<a href="https://${esc(s)}" target="_blank" rel="noopener">${esc(s)}</a>` : `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join(' · ')}
+    </div>
+  `;
+
+  $$('.chapter-tab').forEach(tab => tab.addEventListener('click', () => { currentReadingCh = parseInt(tab.dataset.chidx); renderReading(); }));
+  $$('.reading-progress-bar span').forEach(bar => bar.addEventListener('click', () => { currentReadingCh = parseInt(bar.dataset.chidx); renderReading(); }));
+  $$('.reading-level-btn').forEach(b => b.addEventListener('click', () => { currentReadingLevel = parseInt(b.dataset.level); renderReading(); }));
+  $('#prevCh')?.addEventListener('click', () => { if (currentReadingCh > 0) { currentReadingCh--; renderReading(); } });
+  $('#nextCh')?.addEventListener('click', () => { if (currentReadingCh < eq.chapters.length - 1) { currentReadingCh++; renderReading(); } });
+  $('#markRead')?.addEventListener('click', () => { Notebook.markChapterRead(eq.id, ch.id); renderReading(); });
+  Notebook.setLastRead(eq.id, ch.id);
+}
+
+/* ============================================================
+   MYSTÈRES
+   ============================================================ */
+
+function renderMysteries() {
+  $('#mysteryGrid').innerHTML = equipment.filter(eq => eq.mystery).map(eq => {
+    const solved = Notebook.data.mysteriesSolved.includes(eq.id);
+    const m = eq.mystery;
+    return `<div class="mystery-card ${solved ? 'solved' : ''}">
+      <div class="mystery-status">${solved ? '✓ Résolu' : 'À résoudre'}</div>
+      <h3>${esc(m.title)}</h3>
+      <p>${esc(m.intro)}</p>
+      <button class="btn btn-ghost btn-sm" data-mystery="${eq.id}">${solved ? 'Revoir' : 'Enquêter'}</button>
+    </div>`;
+  }).join('');
+  $$('[data-mystery]').forEach(btn => btn.addEventListener('click', () => openMystery(btn.dataset.mystery)));
+}
+
+function openMystery(eqId) {
+  const eq = equipment.find(e => e.id === eqId);
+  if (!eq) return;
+  const m = eq.mystery;
+  let html = `<h2 style="font-family:var(--serif);font-weight:normal;font-size:1.5rem;margin-bottom:0.5rem;">${esc(m.title)}</h2>
+    <p style="color:var(--text-soft);margin-bottom:1rem;">${esc(m.intro)}</p>
+    <h3 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);font-family:var(--mono);margin-bottom:0.5rem;">Indices</h3>`;
+  m.clues.forEach((c, i) => { html += `<div class="mystery-clue"><span class="clue-num">Indice ${i+1}</span>${esc(c)}</div>`; });
+  html += `<p style="margin-top:1.25rem;font-weight:600;">${esc(m.question)}</p>
+    <button class="btn btn-primary btn-sm" style="margin-top:0.75rem;" data-mystery-a="1">Voir la solution</button>
+    <div id="mysteryAnswer" hidden style="margin-top:1rem;"></div>`;
+  $('#modalInner').innerHTML = html;
+  $('#modal').classList.add('open');
+  $$('[data-mystery-a]').forEach(btn => btn.addEventListener('click', () => {
+    const ans = $('#mysteryAnswer');
+    ans.hidden = false;
+    ans.className = 'mystery-answer';
+    ans.innerHTML = `<strong>Réponse :</strong> ${esc(m.answer)}<br><br>${esc(m.explanation)}`;
+    Notebook.solveMystery(eqId);
+    renderMysteries();
+  }));
+}
+
+/* ============================================================
+   COMPARATEUR
+   ============================================================ */
+
+function initCompare() {
+  const opts = equipment.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  $('#compareA').innerHTML = '<option value="">— Choisir —</option>' + opts;
+  $('#compareB').innerHTML = '<option value="">— Choisir —</option>' + opts;
+  $('#compareA').addEventListener('change', renderComparison);
+  $('#compareB').addEventListener('change', renderComparison);
+}
+
+function renderComparison() {
+  const a = equipment.find(e => e.id === $('#compareA').value);
+  const b = equipment.find(e => e.id === $('#compareB').value);
+  const out = $('#compareResult');
+  if (!a || !b || a.id === b.id) {
+    out.innerHTML = '<p style="color:var(--text-mute);text-align:center;padding:1rem;">Sélectionnez deux équipements différents.</p>';
+    return;
+  }
+  const rows = [
+    ['Période', a.kicker, b.kicker],
+    ['Statut', statusLabel(a.status), statusLabel(b.status)],
+    ['Héritage', a.heritageShort, b.heritageShort]
+  ];
+  out.innerHTML = `<table class="compare-table"><thead><tr><th></th><th>${esc(a.name)}</th><th>${esc(b.name)}</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table>
+    <div class="compare-conclusion">Entre ${esc(a.name)} et ${esc(b.name)}, l'évolution est claire.</div>`;
+}
+
+/* ============================================================
+   DÉCOUVERTE DU JOUR
+   ============================================================ */
+
+function renderToday() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  const item = dailyDiscoveries[dayOfYear % dailyDiscoveries.length];
+  $('#todayCard').innerHTML = `<div class="today-icon">${item.icon}</div>
+    <div><p class="today-kicker">Découverte du jour</p><h3 class="today-title">${esc(item.title)}</h3>
+    <p class="today-text">${esc(item.text)}</p>
+    <details style="font-size:0.85rem;color:var(--text-soft);margin-top:0.5rem;">
+      <summary style="cursor:pointer;color:var(--accent);">Approfondir</summary>
+      <p style="margin-top:0.5rem;">${esc(item.detail)}</p>
+    </details>
+    <button class="btn btn-ghost btn-sm" style="margin-top:0.75rem;" onclick="openReading('${item.link}')">Voir le chapitre lié</button>
+    </div>`;
+}
+
+/* ============================================================
+   RECHERCHE
+   ============================================================ */
+
+function initSearch() {
+  const bar = $('#searchBar');
+  const input = $('#searchInput');
+  $('#searchOpen').addEventListener('click', () => { bar.classList.add('open'); input.focus(); });
+  $('#searchClose').addEventListener('click', () => bar.classList.remove('open'));
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    const results = $('#searchResults');
+    if (!q) { results.innerHTML = ''; return; }
+    const matches = equipment.filter(eq => (eq.name + ' ' + eq.subtitle + ' ' + eq.heritageShort).toLowerCase().includes(q));
+    results.innerHTML = matches.map(m => `<div class="search-result" data-id="${m.id}"><div><strong>${esc(m.name)}</strong><br><small>${esc(m.subtitle)}</small></div>→</div>`).join('') || '<div class="search-empty">Aucun résultat</div>';
+    $$('.search-result').forEach(r => r.addEventListener('click', () => { bar.classList.remove('open'); openReading(r.dataset.id); }));
+  });
+}
+
+/* ============================================================
+   FAVORIS
+   ============================================================ */
+
+function updateFavCount() {
+  const count = Notebook.data.favorites.length;
+  const el = $('#favCount');
+  if (count > 0) { el.hidden = false; el.textContent = count; } else el.hidden = true;
+}
+function updateFavoritesUI() {
+  $$('.fav-btn').forEach(btn => { const active = Notebook.isFavorite(btn.dataset.fav); btn.classList.toggle('active', active); btn.textContent = active ? '★' : '☆'; });
+  updateFavCount(); updateDashboard();
+}
+function initFavButton() {
+  $('#favOpen').addEventListener('click', () => {
+    if (Notebook.data.favorites.length === 0) { alert('Aucun favori.'); return; }
+    openReading(Notebook.data.favorites[0]);
+  });
+}
+
+/* ============================================================
+   FILTRES
+   ============================================================ */
+
+function initFilters() {
+  $$('.level-btn[data-filter]').forEach(btn => btn.addEventListener('click', () => {
+    $$('.level-btn[data-filter]').forEach(b => b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    currentObjFilter = btn.dataset.filter;
+    renderCards();
+  }));
+}
+
+/* ============================================================
+   CARTE
+   ============================================================ */
+
+function initMap() {
+  $$('.map-marker').forEach(marker => {
+    const id = marker.dataset.id;
+    const e = equipment.find(x => x.id === id);
+    if (!e) return;
+    const activate = () => {
+      const prog = Notebook.getProgress(e.id);
+      $('#mapDetail').innerHTML = `${statusBadge(e.status)}<h3>${esc(e.name)}</h3><p class="sub">${esc(e.subtitle)}</p><p class="body">${prog.read}/${prog.total} chapitres lus.</p><p class="body" style="font-size:0.82rem;color:var(--accent);">📜 ${esc(e.heritageShort)}</p><button class="btn btn-primary btn-sm" data-open="${e.id}">Ouvrir</button>`;
+      $('#mapDetail [data-open]').addEventListener('click', () => openReading(e.id));
+    };
+    marker.addEventListener('click', activate);
+  });
+}
+
+/* ============================================================
+   LEXIQUE
+   ============================================================ */
+
+const glossary = [
+  { term:'APXS', def:'Alpha Particle X-ray Spectrometer : analyse la composition chimique des roches.' },
+  { term:'ChemCam', def:'Spectromètre laser embarqué sur Curiosity.' },
+  { term:'Héliopause', def:'Frontière où le vent solaire entre en collision avec le milieu interstellaire.' },
+  { term:'Héritage', def:'Ce qu\'une mission transmet aux missions suivantes : technologies, données, découvertes.' },
+  { term:'MOXIE', def:'Instrument produisant de l\'oxygène à partir du CO2 sur Perseverance.' },
+  { term:'RTG', def:'Radioisotope Thermoelectric Generator : générateur thermoélectrique nucléaire.' },
+  { term:'SAM', def:'Sample Analysis at Mars : laboratoire chimique embarqué sur Curiosity.' },
+  { term:'Sol', def:'Unité de temps martienne : environ 24 h 39 min.' },
+  { term:'Sky crane', def:'Grue volante utilisée pour poser Curiosity et Perseverance en douceur sur Mars.' },
+  { term:'Biosignature', def:'Trace chimique ou biologique pouvant indiquer la présence passée ou présente de vie.' },
+  { term:'Régolithe', def:'Couche de poussière et de fragments rocheux recouvrant le sol lunaire ou martien.' },
+  { term:'Delta', def:'Zone où une rivière se jette dans un lac ou une mer, riche en dépôts sédimentaires.' }
+];
+function renderGlossary() {
+  $('#glossaryGrid').innerHTML = glossary.map(g => `<div class="term"><dt>${esc(g.term)}</dt><dd>${esc(g.def)}</dd></div>`).join('');
+}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+
+let qIndex = 0, qScore = 0, qAnswered = false;
+function resetQuiz() {
+  qIndex = 0; qScore = 0; qAnswered = false;
+  $('#quizFeedback').hidden = true;
+  $('#quizNext').hidden = true;
+  $('#quizProgress').innerHTML = quizData.map((_, i) => `<span class="${i === 0 ? 'current' : ''}"></span>`).join('');
+  loadQuestion();
+}
+function loadQuestion() {
+  const d = quizData[qIndex];
+  $('#quizQuestion').textContent = d.q;
+  $('#quizOptions').innerHTML = d.opts.map((o, i) => `<button class="quiz-opt" data-i="${i}">${o}</button>`).join('');
+  $$('#quizProgress span').forEach((sp, i) => { sp.className = i < qIndex ? 'done' : i === qIndex ? 'current' : ''; });
+  $('#quizScore').textContent = `Score : ${qScore}/${qIndex}`;
+  qAnswered = false;
+  $$('.quiz-opt').forEach(b => b.addEventListener('click', () => answer(parseInt(b.dataset.i))));
+}
+function answer(i) {
+  if (qAnswered) return;
+  qAnswered = true;
+  const d = quizData[qIndex];
+  const ok = i === d.answer;
+  if (ok) qScore++;
+  $$('.quiz-opt').forEach((btn, k) => {
+    btn.disabled = true;
+    if (k === d.answer) btn.classList.add('correct');
+    if (k === i && !ok) btn.classList.add('incorrect');
+  });
+  const fb = $('#quizFeedback');
+  fb.hidden = false;
+  fb.className = 'quiz-feedback ' + (ok ? 'ok' : 'ko');
+  fb.textContent = (ok ? '✓ Correct. ' : '✗ Incorrect. ') + d.exp;
+  $('#quizScore').textContent = `Score : ${qScore}/${qIndex + 1}`;
+  const next = $('#quizNext');
+  next.hidden = false;
+  next.textContent = qIndex < quizData.length - 1 ? 'Question suivante' : 'Voir le résultat';
+  next.onclick = () => { if (qIndex < quizData.length - 1) { qIndex++; loadQuestion(); } else showResult(); };
+}
+function showResult() {
+  const total = quizData.length;
+  const msg = qScore === total ? 'Parfait !' : qScore >= total * 0.7 ? 'Bien joué !' : 'Reprenez la lecture.';
+  $('#quizQuestion').textContent = msg;
+  $('#quizOptions').innerHTML = '';
+  $('#quizFeedback').hidden = true;
+  $('#quizNext').hidden = true;
+  $('#quizScore').textContent = `Score final : ${qScore}/${total}`;
+  $$('#quizProgress span').forEach(s => s.className = 'done');
+  const again = document.createElement('button');
+  again.className = 'btn btn-primary btn-sm';
+  again.textContent = 'Recommencer';
+  again.onclick = resetQuiz;
+  $('#quizOptions').appendChild(again);
+}
+
+/* ============================================================
+   MODAL & INIT
+   ============================================================ */
+
+function initModal() {
+  $('#modalClose').addEventListener('click', () => $('#modal').classList.remove('open'));
+  $('#modal').addEventListener('click', e => { if (e.target === $('#modal')) $('#modal').classList.remove('open'); });
+  $('#readingClose').addEventListener('click', closeReading);
+  $('#readingFav').addEventListener('click', () => { if (currentReadingEq) { Notebook.toggleFavorite(currentReadingEq.id); renderReading(); } });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if ($('#modal').classList.contains('open')) $('#modal').classList.remove('open');
+      if ($('#readingModal').classList.contains('open')) closeReading();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  Notebook.load();
+  renderToday();
+  renderCards();
+  renderMysteries();
+  renderGlossary();
+  initCompare();
+  initSearch();
+  initFilters();
+  initMap();
+  initModal();
+  initFavButton();
+  resetQuiz();
+  updateDashboard();
+  updateAllCardProgress();
+});
+</script>
+
+<!-- ============================================================
+     3D — ROVER MOBILE + TERRAIN + ANIMATIONS
+     ============================================================ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const MODEL_URL_GLB = 'https://raw.githubusercontent.com/gkjohnson/3d-demo-data/main/models/nasa-m2020/Perseverance.glb';
+const ENV_URL = 'https://raw.githubusercontent.com/univox540-ops/Environnement-Crater/main/jezero_crater_mars.glb';
+const FALLBACK_IMG = 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg';
+const ACCENT = 0xD4A24C;
+const BG = 0xC79462;
+const FOG_COLOR = 0xD4A577;
+
+const INSTRUMENTS = [
+  { id:'mastcam',  name:'Mastcam-Z', fn:'Caméras panoramiques stéréoscopiques zoomables montées sur le mât.',
+    specs:{ 'Résolution':'2 Mpx', 'Zoom':'3:1 à 10:1', 'Position':'Mât' },
+    science:'Mastcam-Z capture des images en couleur et en relief pour cartographier le terrain.',
+    pos: new THREE.Vector3(0.08, 2.10, 0.30) },
+  { id:'supercam', name:'SuperCam', fn:'Spectromètre LIBS, Raman et imagerie à distance.',
+    specs:{ 'Portée':'7 m', 'Techniques':'LIBS / Raman', 'Position':'Mât' },
+    science:'SuperCam tire un laser sur une roche et analyse la lumière émise.',
+    pos: new THREE.Vector3(-0.12, 1.95, 0.30) },
+  { id:'pixl',     name:'PIXL', fn:'Spectromètre à rayons X à fluorescence (XRF).',
+    specs:{ 'Résolution':'100 µm', 'Technique':'XRF', 'Position':'Bras' },
+    science:'PIXL cartographie la composition élémentaire des roches.',
+    pos: new THREE.Vector3(0.50, 0.95, -0.20) },
+  { id:'meda',     name:'MEDA', fn:'Station météorologique.',
+    specs:{ 'Mesures':'Vent, température, pression', 'Position':'Mât' },
+    science:'MEDA mesure en continu les conditions atmosphériques martiennes.',
+    pos: new THREE.Vector3(0.35, 1.10, -0.65) }
+];
+
+const Anim = {
+  wheels: [], mastGroup: null, beacon: null, dust: null,
+  baseY: 0, isMoving: false, lastEmit: 0, lean: 0, leanTarget: 0
+};
+
+let initialized = false;
+const sectionEl = document.getElementById('modele3d');
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !initialized) {
+        initialized = true; io.disconnect();
+        try { initLab(); } catch(err) { console.error('Init 3D:', err); showStaticFallback('Erreur'); }
+      }
+    });
+  }, { threshold: 0.05 });
+  io.observe(sectionEl);
+} else {
+  window.addEventListener('load', () => { if (!initialized) { initialized = true; initLab(); } });
+}
+
+function showStaticFallback(reason) {
+  const viewport = document.getElementById('labViewport');
+  const badgeEl = document.getElementById('labBadge');
+  const loadingEl = document.getElementById('labLoading');
+  const img = document.createElement('img');
+  img.src = FALLBACK_IMG;
+  img.alt = 'Vue statique';
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2rem;opacity:0.65;';
+  viewport.appendChild(img);
+  badgeEl.textContent = 'Vue statique — ' + reason;
+  badgeEl.style.color = 'var(--bg)';
+  if (loadingEl) loadingEl.hidden = true;
+}
+
+function initLab() {
+  const viewport = document.getElementById('labViewport');
+  const canvas = document.getElementById('labCanvas');
+  const loadingEl = document.getElementById('labLoading');
+  const badgeEl = document.getElementById('labBadge');
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(FOG_COLOR, 25, 120);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  camera.position.set(3.5, 2.5, 4.5);
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  } catch(err) {
+    showStaticFallback('WebGL indisponible');
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  scene.add(new THREE.AmbientLight(0xC9A884, 0.65));
+  scene.add(new THREE.HemisphereLight(0xE0C8A0, 0x6B4A30, 0.55));
+
+  const key = new THREE.DirectionalLight(0xFFF0D8, 1.4);
+  key.position.set(5, 8, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far = 40;
+  key.shadow.camera.left = -12;
+  key.shadow.camera.right = 12;
+  key.shadow.camera.top = 12;
+  key.shadow.camera.bottom = -12;
+  key.shadow.bias = -0.0005;
+  scene.add(key);
+
+  const rim = new THREE.DirectionalLight(0xFFE0B0, 0.5);
+  rim.position.set(-4, 3, -5);
+  scene.add(rim);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.target.set(0, 0.9, 0);
+  controls.minDistance = 1.8;
+  controls.maxDistance = 40;
+  controls.maxPolarAngle = Math.PI / 2.1;
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.update();
+
+  let envMesh = null;
+  let envLoaded = false;
+  const groundGeo = new THREE.PlaneGeometry(200, 200);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x9A6A45, roughness: 1.0, metalness: 0.0 });
+  const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+  groundMesh.rotation.x = -Math.PI / 2;
+  groundMesh.receiveShadow = true;
+  scene.add(groundMesh);
+
+  const envLoader = new GLTFLoader();
+  envLoader.load(ENV_URL,
+    (gltf) => {
+      envMesh = gltf.scene;
+      const toRemove = [];
+      envMesh.traverse(c => { if (c.isLight || c.isCamera) toRemove.push(c); });
+      toRemove.forEach(c => c.parent && c.parent.remove(c));
+      envMesh.traverse(c => { if (c.isMesh) { c.receiveShadow = true; c.castShadow = false; } });
+
+      const box1 = new THREE.Box3().setFromObject(envMesh);
+      const size1 = box1.getSize(new THREE.Vector3());
+      const scale = 100 / Math.max(size1.x, size1.z, 0.001);
+      envMesh.scale.setScalar(scale);
+      envMesh.updateMatrixWorld(true);
+
+      const box2 = new THREE.Box3().setFromObject(envMesh);
+      const cx = (box2.min.x + box2.max.x) / 2;
+      const cz = (box2.min.z + box2.max.z) / 2;
+      envMesh.position.x -= cx;
+      envMesh.position.z -= cz;
+      envMesh.updateMatrixWorld(true);
+
+      const probe = new THREE.Raycaster(new THREE.Vector3(0, 1000, 0), new THREE.Vector3(0, -1, 0));
+      const probeHits = probe.intersectObject(envMesh, true);
+      let surfaceY = 0;
+      if (probeHits.length > 0) surfaceY = probeHits[0].point.y;
+      envMesh.position.y -= surfaceY;
+      envMesh.updateMatrixWorld(true);
+
+      scene.add(envMesh);
+      envLoaded = true;
+      groundMesh.visible = false;
+      badgeEl.textContent = 'Cratère Jezero · chargé';
+      badgeEl.classList.add('ready');
+    },
+    (xhr) => {
+      if (xhr.total) {
+        const pct = Math.round(xhr.loaded / xhr.total * 100);
+        const s = loadingEl.querySelector('span:last-child');
+        if (s) s.textContent = `Environnement ${pct}%`;
+      }
+    },
+    (err) => console.warn('[ENV] Échec, sol de secours conservé', err)
+  );
+
+  const roverGroup = new THREE.Group();
+  scene.add(roverGroup);
+
+  const poiGroup = new THREE.Group();
+  roverGroup.add(poiGroup);
+  const poiMeshes = [];
+
+  function buildPOI(inst) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 20, 20),
+      new THREE.MeshStandardMaterial({ color: ACCENT, emissive: ACCENT, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.35 })
+    );
+    mesh.position.copy(inst.pos);
+    mesh.userData.instrument = inst;
+    mesh.userData.baseScale = 1;
+    mesh.castShadow = true;
+    poiGroup.add(mesh);
+    poiMeshes.push(mesh);
+  }
+
+  function setupBeacon() {
+    const geo = new THREE.SphereGeometry(0.05, 12, 12);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xFF3333, emissive: 0xFF3333, emissiveIntensity: 2, transparent: true });
+    Anim.beacon = new THREE.Mesh(geo, mat);
+  }
+
+  function setupDust() {
+    const count = 200;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+    const lifetimes = new Float32Array(count);
+    for (let i = 0; i < count; i++) positions[i*3+1] = -1000;
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xC79462, size: 0.15, transparent: true, opacity: 0.6, depthWrite: false, sizeAttenuation: true });
+    Anim.dust = { points: new THREE.Points(geo, mat), positions, velocities, lifetimes, count };
+    scene.add(Anim.dust.points);
+  }
+
+  function emitDust() {
+    const d = Anim.dust;
+    if (!d) return;
+    const back = new THREE.Vector3(0, 0, -1).applyQuaternion(roverGroup.quaternion);
+    for (let i = 0; i < d.count; i++) {
+      if (d.lifetimes[i] <= 0) {
+        d.positions[i*3]   = roverGroup.position.x + back.x * 0.8 + (Math.random()-0.5) * 0.5;
+        d.positions[i*3+1] = roverGroup.position.y + 0.15 + Math.random() * 0.2;
+        d.positions[i*3+2] = roverGroup.position.z + back.z * 0.8 + (Math.random()-0.5) * 0.5;
+        d.velocities[i*3]   = (Math.random()-0.5) * 0.5;
+        d.velocities[i*3+1] = 0.3 + Math.random() * 0.4;
+        d.velocities[i*3+2] = (Math.random()-0.5) * 0.5;
+        d.lifetimes[i] = 1.0;
+        return;
+      }
+    }
+  }
+
+  function updateDust(dt) {
+    const d = Anim.dust;
+    if (!d) return;
+    let active = false;
+    for (let i = 0; i < d.count; i++) {
+      if (d.lifetimes[i] > 0) {
+        active = true;
+        d.lifetimes[i] -= dt;
+        d.positions[i*3]   += d.velocities[i*3]   * dt;
+        d.positions[i*3+1] += d.velocities[i*3+1] * dt;
+        d.positions[i*3+2] += d.velocities[i*3+2] * dt;
+        d.velocities[i*3+1] -= 1.0 * dt;
+        if (d.lifetimes[i] <= 0) d.positions[i*3+1] = -1000;
+      }
+    }
+    if (active) d.points.geometry.attributes.position.needsUpdate = true;
+  }
+
+  setupBeacon();
+  setupDust();
+
+  function buildProceduralRover() {
+    const g = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xC8BBA0, roughness: 0.65, metalness: 0.25 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x3A3E48, roughness: 0.7, metalness: 0.5 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: ACCENT, roughness: 0.35, metalness: 0.75 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1C1F25, roughness: 0.9, metalness: 0.2 });
+
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.9), bodyMat);
+    chassis.position.y = 0.55; chassis.castShadow = true; chassis.receiveShadow = true;
+    g.add(chassis);
+
+    const topPanel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 1.7), darkMat);
+    topPanel.position.y = 0.82; topPanel.castShadow = true;
+    g.add(topPanel);
+
+    const sam = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.35), darkMat);
+    sam.position.set(0.5, 0.92, -0.2); sam.castShadow = true;
+    g.add(sam);
+
+    const rtg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.5, 16), darkMat);
+    rtg.rotation.z = Math.PI / 2; rtg.position.set(0, 0.75, -1.05); rtg.castShadow = true;
+    g.add(rtg);
+
+    const rad = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.22, 12), goldMat);
+    rad.rotation.x = Math.PI / 2; rad.position.set(0.35, 1.10, -0.65); rad.castShadow = true;
+    g.add(rad);
+
+    const mastGroup = new THREE.Group();
+    mastGroup.position.set(0, 1.45, 0.15);
+    g.add(mastGroup);
+    Anim.mastGroup = mastGroup;
+
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 12), bodyMat);
+    mast.castShadow = true;
+    mastGroup.add(mast);
+
+    const headGroup = new THREE.Group();
+    headGroup.position.y = 0.65;
+    mastGroup.add(headGroup);
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.22, 0.28), darkMat);
+    head.castShadow = true;
+    headGroup.add(head);
+
+    const eyeGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.09, 16);
+    const eyeL = new THREE.Mesh(eyeGeo, darkMat);
+    eyeL.rotation.x = Math.PI / 2; eyeL.position.set(0.12, 0, 0.17);
+    headGroup.add(eyeL);
+    const eyeR = new THREE.Mesh(eyeGeo, darkMat);
+    eyeR.rotation.x = Math.PI / 2; eyeR.position.set(-0.04, 0, 0.17);
+    headGroup.add(eyeR);
+
+    const chem = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.22, 12), goldMat);
+    chem.rotation.x = Math.PI / 2; chem.position.set(-0.12, -0.15, 0.17);
+    headGroup.add(chem);
+
+    const armSeg1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.4), bodyMat);
+    armSeg1.position.set(0.25, 0.55, 1.15); armSeg1.castShadow = true;
+    g.add(armSeg1);
+    const armSeg2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.35), goldMat);
+    armSeg2.position.set(0.25, 0.40, 1.35); armSeg2.castShadow = true;
+    g.add(armSeg2);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 20);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const hubGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.24, 12);
+    hubGeo.rotateZ(Math.PI / 2);
+
+    const wheelPositions = [[-0.7,-0.6],[-0.7,0],[-0.7,0.6],[0.7,-0.6],[0.7,0],[0.7,0.6]];
+    wheelPositions.forEach(([x, z]) => {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(x, 0.32, z); w.castShadow = true; w.receiveShadow = true;
+      g.add(w); Anim.wheels.push(w);
+      const hub = new THREE.Mesh(hubGeo, goldMat);
+      hub.position.set(x, 0.32, z);
+      g.add(hub); Anim.wheels.push(hub);
+    });
+
+    return g;
+  }
+
+  let roverModel = null;
+
+  function useProceduralRover() {
+    roverModel = buildProceduralRover();
+    roverGroup.add(roverModel);
+    Anim.baseY = 0;
+    const box = new THREE.Box3().setFromObject(roverGroup);
+    Anim.beacon.position.set(0, box.max.y + 0.05, 0);
+    roverGroup.add(Anim.beacon);
+    INSTRUMENTS.forEach(buildPOI);
+    badgeEl.textContent = 'Modèle simplifié · animé';
+    fitCameraTo(roverModel);
+    loadingEl.hidden = true;
+  }
+
+  function adaptModel(model, sourceLabel) {
+    roverModel = model;
+    const box0 = new THREE.Box3().setFromObject(roverModel);
+    const size0 = box0.getSize(new THREE.Vector3());
+    const scale = 2.4 / Math.max(size0.x, size0.y, size0.z, 0.001);
+    roverModel.scale.setScalar(scale);
+    roverModel.updateMatrixWorld(true);
+
+    const box1 = new THREE.Box3().setFromObject(roverModel);
+    const center1 = box1.getCenter(new THREE.Vector3());
+    roverModel.position.x -= center1.x;
+    roverModel.position.z -= center1.z;
+    roverModel.position.y -= box1.min.y;
+
+    roverGroup.add(roverModel);
+    Anim.baseY = roverModel.position.y;
+    roverModel.updateMatrixWorld(true);
+
+    const box2 = new THREE.Box3().setFromObject(roverGroup);
+    const top = box2.max.y;
+    const cx = (box2.min.x + box2.max.x) / 2;
+    const cz = (box2.min.z + box2.max.z) / 2;
+
+    INSTRUMENTS.forEach(inst => {
+      if (inst.id === 'mastcam')   inst.pos.set(cx + 0.05, top * 0.95, cz + 0.2);
+      if (inst.id === 'supercam')  inst.pos.set(cx - 0.12, top * 0.92, cz + 0.22);
+      if (inst.id === 'pixl')      inst.pos.set(cx + 0.45, top * 0.4,  cz - 0.2);
+      if (inst.id === 'meda')      inst.pos.set(cx + 0.3,  top * 0.5,  cz - 0.6);
+      buildPOI(inst);
+    });
+
+    Anim.beacon.position.set(0, top + 0.1, 0);
+    roverGroup.add(Anim.beacon);
+
+    badgeEl.textContent = sourceLabel + (envLoaded ? ' · Jezero' : '');
+    badgeEl.classList.add('ready');
+    fitCameraTo(roverModel);
+    loadingEl.hidden = true;
+  }
+
+  function loadRoverGLB() {
+    loadingEl.hidden = false;
+    const draco = new DRACOLoader();
+    draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(draco);
+    loader.load(MODEL_URL_GLB,
+      gltf => {
+        gltf.scene.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        adaptModel(gltf.scene, 'Perseverance');
+      },
+      xhr => {
+        if (xhr.total) {
+          const s = loadingEl.querySelector('span:last-child');
+          if (s) s.textContent = `Rover ${Math.round(xhr.loaded / xhr.total * 100)}%`;
+        }
+      },
+      err => {
+        console.warn('GLB rover échoué, fallback procédural :', err);
+        useProceduralRover();
+      }
+    );
+  }
+
+  loadRoverGLB();
+
+  function fitCameraTo(obj) {
+    if (!obj) return;
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * Math.PI / 180;
+    const distance = maxDim / (2 * Math.tan(fov / 2));
+    const camDist = distance * 1.8;
+    camera.position.set(camDist * 0.75, camDist * 0.55, camDist * 0.95);
+    controls.target.copy(center);
+    controls.update();
+  }
+
+  const keys = { forward: false, back: false, left: false, right: false };
+  const ROVER_SPEED = 2.5;
+  const terrainRaycaster = new THREE.Raycaster();
+
+  function getTerrainHeight(x, z) {
+    if (!envLoaded || !envMesh) return 0;
+    terrainRaycaster.set(new THREE.Vector3(x, 1000, z), new THREE.Vector3(0, -1, 0));
+    const hits = terrainRaycaster.intersectObject(envMesh, true);
+    return hits.length > 0 ? hits[0].point.y : 0;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const rect = sectionEl.getBoundingClientRect();
+    const inView = rect.top < window.innerHeight && rect.bottom > 0;
+    if (!inView) return;
+    const k = e.key;
+    if (k === 'w' || k === 'W') { keys.forward = true; e.preventDefault(); }
+    if (k === 's' || k === 'S') { keys.back = true; e.preventDefault(); }
+    if (k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
+    if (k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
+    if (document.activeElement === renderer.domElement) {
+      if (k === 'ArrowUp')    { keys.forward = true; e.preventDefault(); }
+      if (k === 'ArrowDown')  { keys.back = true; e.preventDefault(); }
+      if (k === 'ArrowLeft')  { keys.left = true; e.preventDefault(); }
+      if (k === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    const k = e.key;
+    if (k === 'w' || k === 'W' || k === 'ArrowUp')    keys.forward = false;
+    if (k === 's' || k === 'S' || k === 'ArrowDown')  keys.back = false;
+    if (k === 'a' || k === 'A' || k === 'ArrowLeft')  keys.left = false;
+    if (k === 'd' || k === 'D' || k === 'ArrowRight') keys.right = false;
+  });
+
+  document.querySelectorAll('.rover-dpad [data-move]').forEach(btn => {
+    const move = btn.dataset.move;
+    const down = (e) => {
+      e.preventDefault();
+      if (move === 'forward') keys.forward = true;
+      if (move === 'back')    keys.back = true;
+      if (move === 'left')    keys.left = true;
+      if (move === 'right')   keys.right = true;
+    };
+    const up = (e) => {
+      e.preventDefault();
+      if (move === 'forward') keys.forward = false;
+      if (move === 'back')    keys.back = false;
+      if (move === 'left')    keys.left = false;
+      if (move === 'right')   keys.right = false;
+    };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointerleave', up);
+    btn.addEventListener('pointercancel', up);
+  });
+
+  function updateRoverMovement(dt) {
+    if (!roverModel) return;
+    const forwardVec = new THREE.Vector3();
+    camera.getWorldDirection(forwardVec);
+    forwardVec.y = 0;
+    forwardVec.normalize();
+    const rightVec = new THREE.Vector3().crossVectors(forwardVec, new THREE.Vector3(0, 1, 0)).normalize();
+
+    const moveDir = new THREE.Vector3();
+    if (keys.forward) moveDir.add(forwardVec);
+    if (keys.back)    moveDir.sub(forwardVec);
+    if (keys.right)   moveDir.add(rightVec);
+    if (keys.left)    moveDir.sub(rightVec);
+
+    Anim.isMoving = moveDir.lengthSq() > 0;
+
+    if (Anim.isMoving) {
+      moveDir.normalize();
+      const newX = roverGroup.position.x + moveDir.x * ROVER_SPEED * dt;
+      const newZ = roverGroup.position.z + moveDir.z * ROVER_SPEED * dt;
+      const newY = getTerrainHeight(newX, newZ);
+      roverGroup.position.set(newX, newY, newZ);
+
+      const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+      let diff = targetAngle - roverGroup.rotation.y;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      roverGroup.rotation.y += diff * Math.min(1, dt * 8);
+
+      const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+      controls.target.set(roverGroup.position.x, roverGroup.position.y + 0.9, roverGroup.position.z);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+
+      Anim.lastEmit += dt;
+      if (Anim.lastEmit > 0.05) { emitDust(); Anim.lastEmit = 0; }
+    }
+  }
+
+  function updateAnimations(dt, elapsed) {
+    if (Anim.isMoving && Anim.wheels.length > 0) {
+      const spin = dt * 8;
+      Anim.wheels.forEach(w => { w.rotation.x += spin; });
+    }
+    if (roverModel) {
+      const bobAmount = Anim.isMoving ? 0.015 : 0.02;
+      const bobSpeed  = Anim.isMoving ? 8 : 2;
+      const bob = Math.sin(elapsed * bobSpeed) * bobAmount;
+      Anim.leanTarget = Anim.isMoving ? 0.03 : 0;
+      Anim.lean += (Anim.leanTarget - Anim.lean) * Math.min(1, dt * 5);
+      roverModel.position.y = Anim.baseY + bob;
+      roverModel.rotation.x = Anim.lean;
+    }
+    if (Anim.mastGroup) {
+      if (!Anim.isMoving) {
+        Anim.mastGroup.rotation.y = Math.sin(elapsed * 0.6) * 0.5;
+      } else {
+        Anim.mastGroup.rotation.y += (0 - Anim.mastGroup.rotation.y) * Math.min(1, dt * 3);
+      }
+    }
+    if (Anim.beacon) {
+      const blink = Math.sin(elapsed * 4) > 0.3 ? 2.0 : 0.2;
+      Anim.beacon.material.emissiveIntensity = blink;
+    }
+    updateDust(dt);
+    poiMeshes.forEach(m => {
+      const s = m.userData.baseScale || 1;
+      m.scale.setScalar(s * (1 + Math.sin(elapsed * 3) * 0.06));
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let downPos = null;
+  const DRAG = 6;
+
+  renderer.domElement.addEventListener('pointerdown', e => { downPos = { x: e.clientX, y: e.clientY }; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!downPos) return;
+    const dx = e.clientX - downPos.x, dy = e.clientY - downPos.y;
+    downPos = null;
+    if (Math.hypot(dx, dy) > DRAG) return;
+    if (!poiGroup.visible) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(poiMeshes, false);
+    if (hits.length) selectInstrument(hits[0].object.userData.instrument);
+  });
+
+  const insDefault = document.getElementById('inspectorDefault');
+  const insDetail = document.getElementById('inspectorDetail');
+  const insName = document.getElementById('inspectorName');
+  const insFn = document.getElementById('inspectorFunction');
+  const insMeta = document.getElementById('inspectorMeta');
+  const insSci = document.getElementById('inspectorScience');
+
+  function selectInstrument(inst) {
+    insDefault.hidden = true;
+    insDetail.hidden = false;
+    insName.textContent = inst.name;
+    insFn.textContent = inst.fn;
+    insMeta.innerHTML = Object.entries(inst.specs).map(([k, v]) =>
+      `<div class="meta-item"><div class="meta-label">${k}</div><div class="meta-value">${v}</div></div>`
+    ).join('');
+    insSci.textContent = inst.science;
+    if (window.Notebook) window.Notebook.inspectInstrument(inst.id);
+    poiMeshes.forEach(m => {
+      const sel = m.userData.instrument === inst;
+      m.material.emissiveIntensity = sel ? 2.2 : 0.9;
+      m.userData.baseScale = sel ? 1.4 : 1;
+    });
+  }
+  document.getElementById('btnBackInspector').addEventListener('click', () => {
+    insDefault.hidden = false; insDetail.hidden = true;
+    poiMeshes.forEach(m => { m.material.emissiveIntensity = 0.9; m.userData.baseScale = 1; });
+  });
+
+  let autoRotate = false;
+  document.getElementById('btnReset').addEventListener('click', () => fitCameraTo(roverModel));
+  document.getElementById('btnAuto').addEventListener('click', e => {
+    autoRotate = !autoRotate;
+    controls.autoRotate = autoRotate;
+    controls.autoRotateSpeed = 2;
+    e.currentTarget.setAttribute('aria-pressed', autoRotate);
+  });
+  document.getElementById('btnTogglePOI').addEventListener('click', e => {
+    poiGroup.visible = !poiGroup.visible;
+    e.currentTarget.setAttribute('aria-pressed', poiGroup.visible);
+  });
+  document.getElementById('btnViewTop').addEventListener('click', () => {
+    camera.position.set(roverGroup.position.x, roverGroup.position.y + 6, roverGroup.position.z + 0.01);
+    controls.target.set(roverGroup.position.x, roverGroup.position.y + 0.9, roverGroup.position.z);
+    controls.update();
+  });
+  document.getElementById('btnViewSide').addEventListener('click', () => {
+    camera.position.set(roverGroup.position.x + 5, roverGroup.position.y + 2, roverGroup.position.z);
+    controls.target.set(roverGroup.position.x, roverGroup.position.y + 0.9, roverGroup.position.z);
+    controls.update();
+  });
+  document.getElementById('btnViewFront').addEventListener('click', () => {
+    camera.position.set(roverGroup.position.x, roverGroup.position.y + 2, roverGroup.position.z + 5);
+    controls.target.set(roverGroup.position.x, roverGroup.position.y + 0.9, roverGroup.position.z);
+    controls.update();
+  });
+  document.getElementById('btnViewDefault').addEventListener('click', () => fitCameraTo(roverModel));
+  document.getElementById('btnViewWide').addEventListener('click', () => {
+    camera.position.set(roverGroup.position.x + 15, roverGroup.position.y + 10, roverGroup.position.z + 15);
+    controls.target.set(roverGroup.position.x, roverGroup.position.y, roverGroup.position.z);
+    controls.update();
+  });
+
+  function resize() {
+    const w = viewport.clientWidth, h = viewport.clientHeight;
+    if (w === 0 || h === 0) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(viewport);
+  else window.addEventListener('resize', resize);
+  resize();
+
+  const clock = new THREE.Clock();
+  let elapsedTime = 0;
+  (function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    elapsedTime += dt;
+    updateRoverMovement(dt);
+    updateAnimations(dt, elapsedTime);
+    controls.update();
+    renderer.render(scene, camera);
+  })();
+}
+</script>
+</body>
+</html>
